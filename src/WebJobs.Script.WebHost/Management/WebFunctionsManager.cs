@@ -214,7 +214,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var content = JsonConvert.SerializeObject(triggers);
             var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
 
-            var url = $"https://{Environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHostName)}/operations/settriggers";
+            var protocol = "https";
+            // On private stamps with no ssl certificate use http instead.
+            if (Environment.GetEnvironmentVariable(EnvironmentSettingNames.SkipSslValidation) == "1")
+            {
+                protocol = "http";
+            }
+
+            var url = $"{protocol}://{Environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHostName)}/operations/settriggers";
 
             using (var request = new HttpRequestMessage(HttpMethod.Post, url))
             {
