@@ -207,13 +207,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return await InternalSyncTriggers(functionsTriggers);
         }
 
-        // This function will call POST https://{app}.azurewebsites.net/operation/settriggers with the content
-        // of triggers. It'll verify app owner ship using a SWT token valid for 5 minutes. It should be plenty.
-        private async Task<(bool, string)> InternalSyncTriggers(IEnumerable<JObject> triggers)
+        internal static HttpRequestMessage BuildSyncTriggersRequest()
         {
-            var content = JsonConvert.SerializeObject(triggers);
-            var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
-
             var protocol = "https";
             // On private stamps with no ssl certificate use http instead.
             if (Environment.GetEnvironmentVariable(EnvironmentSettingNames.SkipSslValidation) == "1")
@@ -223,7 +218,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             var url = $"{protocol}://{Environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHostName)}/operations/settriggers";
 
-            using (var request = new HttpRequestMessage(HttpMethod.Post, url))
+            return new HttpRequestMessage(HttpMethod.Post, url);
+        }
+
+        // This function will call POST https://{app}.azurewebsites.net/operation/settriggers with the content
+        // of triggers. It'll verify app owner ship using a SWT token valid for 5 minutes. It should be plenty.
+        private async Task<(bool, string)> InternalSyncTriggers(IEnumerable<JObject> triggers)
+        {
+            var content = JsonConvert.SerializeObject(triggers);
+            var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
+
+            using (var request = BuildSyncTriggersRequest())
             {
                 // This has to start with Mozilla because the frontEnd checks for it.
                 request.Headers.Add("User-Agent", "Mozilla/5.0");
