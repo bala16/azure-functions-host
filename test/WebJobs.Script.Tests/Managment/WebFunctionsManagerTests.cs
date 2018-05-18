@@ -53,14 +53,14 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
         }
 
         [Theory]
-        [InlineData(1, "http://siteName/operations/settriggers")]
-        [InlineData(0, "https://siteName/operations/settriggers")]
+        [InlineData(1, "http://sitename/operations/settriggers")]
+        [InlineData(0, "https://sitename/operations/settriggers")]
         public void Disables_Ssl_If_SkipSslValidation_Enabled(int skipSslValidation, string syncTriggersUri)
         {
             var vars = new Dictionary<string, string>
             {
                 { EnvironmentSettingNames.SkipSslValidation, skipSslValidation.ToString() },
-                { EnvironmentSettingNames.AzureWebsiteHostName, "siteName" },
+                { EnvironmentSettingNames.AzureWebsiteHostName, "sitename" },
             };
 
             using (var env = new TestScopedEnvironmentVariable(vars))
