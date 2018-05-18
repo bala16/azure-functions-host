@@ -30,6 +30,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string ContainerName = "CONTAINER_NAME";
         public const string WebSiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string ContainerEncryptionKey = "CONTAINER_ENCRYPTION_KEY";
+        public const string ConsoleLoggingDisabled = "CONSOLE_LOGGING_DISABLED";
         public const string SkipSslValidation = "SCM_SKIP_SSL_VALIDATION";
     }
 }
