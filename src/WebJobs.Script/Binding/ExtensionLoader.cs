@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
 
                             if (File.Exists(path))
                             {
-                                return FunctionAssemblyLoadContext.Shared.LoadFromAssemblyPath(path);
+                                return FunctionAssemblyLoadContext.Shared.LoadFromAssemblyPath(path, true);
                             }
 
                             return null;
@@ -113,7 +113,7 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
 
         private void LoadExtensions(Assembly assembly, string locationHint)
         {
-            foreach (var type in assembly.ExportedTypes)
+            foreach (var type in assembly.ExportedTypes.Where(p => !p.IsAbstract))
             {
                 LoadIfExtensionType(type, locationHint);
             }
