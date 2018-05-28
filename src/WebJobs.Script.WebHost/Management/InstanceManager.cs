@@ -36,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         {
             if (!WebScriptHostManager.InStandbyMode)
             {
+//                _logger.LogWarning("Assign called while host is not in placeholder mode");
                 _logger.LogError("Assign called while host is not in placeholder mode");
                 return false;
             }
