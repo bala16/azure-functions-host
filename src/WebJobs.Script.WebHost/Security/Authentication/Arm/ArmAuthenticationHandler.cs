@@ -46,7 +46,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
 
             try
             {
-                if (!SimpleWebTokenHelper.ValidateToken(token, Clock))
+                if (!SimpleWebTokenHelper.ValidateToken(token, Clock, _logger))
                 {
                     return AuthenticateResult.Fail("Token validation failed.");
                 }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
 {
@@ -88,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
         {
             try
             {
-                return ValidateToken(token, systemClock);
+                return ValidateToken(token, systemClock, null);
             }
             catch
             {
@@ -96,17 +97,31 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
             }
         }
 
-        public static bool ValidateToken(string token, ISystemClock systemClock)
+        public static bool ValidateToken(string token, ISystemClock systemClock, ILogger logger)
         {
             // Use WebSiteAuthEncryptionKey if available else fallback to ContainerEncryptionKey.
             // Until the container is specialized to a specific site WebSiteAuthEncryptionKey will not be available.
             byte[] key;
             if (!TryGetEncryptionKey(EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key, false))
             {
-                TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key);
+                logger.LogInformation("AAA " + EnvironmentSettingNames.WebSiteAuthEncryptionKey + " not found");
+                if (!TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key))
+                {
+                    logger.LogInformation("AAA " + EnvironmentSettingNames.ContainerEncryptionKey + " not found");
+                }
+                else
+                {
+                    logger.LogInformation("AAA " + EnvironmentSettingNames.ContainerEncryptionKey + " found " + key);
+                }
+            }
+            else
+            {
+                    logger.LogInformation("AAA " + EnvironmentSettingNames.WebSiteAuthEncryptionKey + " found " + key);
             }
 
             var data = Decrypt(key, token);
+
+            logger.LogInformation("AAA data " + data);
 
             var parsedToken = data
                 // token = key1=value1;key2=value2

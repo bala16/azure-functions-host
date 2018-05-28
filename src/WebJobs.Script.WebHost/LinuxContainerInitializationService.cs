@@ -38,6 +38,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         private async Task InitializeAssignmentContext(CancellationToken cancellationToken)
         {
+            var webKey = Environment.GetEnvironmentVariable(EnvironmentSettingNames.WebSiteAuthEncryptionKey);
+            var conKey = Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerEncryptionKey);
+
+            _logger.LogInformation("AAA webkey " + webKey);
+            _logger.LogInformation("AAA conKey " + conKey);
+
             var startContext = _settingsManager.GetSetting(EnvironmentSettingNames.ContainerStartContext);
 
             // Container start context is not available directly
