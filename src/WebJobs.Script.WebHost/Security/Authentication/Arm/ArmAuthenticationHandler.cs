@@ -39,15 +39,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
             string token = null;
             if (!Context.Request.Headers.TryGetValue(ArmTokenHeaderName, out StringValues values))
             {
+                _logger.LogWarning(string.Format("No {0}", ArmTokenHeaderName));
                 return AuthenticateResult.NoResult();
             }
 
             token = values.First();
+            _logger.LogInformation("Token = " + token);
 
             try
             {
                 if (!SimpleWebTokenHelper.ValidateToken(token, Clock))
                 {
+                    _logger.LogWarning("Token validation failed.");
                     return AuthenticateResult.Fail("Token validation failed.");
                 }
 
