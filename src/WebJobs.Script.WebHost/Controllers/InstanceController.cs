@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpGet]
         [Route("admin/instance/info")]
-        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+//        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public IActionResult GetInstanceInfo()
         {
             return Ok(_instanceManager.GetInstanceInfo());
