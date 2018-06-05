@@ -12,13 +12,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 {
     public class WebJobsScriptHostService : IHostedService, IDisposable
     {
+        private readonly ILinuxContainerInitializationService _linuxContainerInitializationService;
         private readonly WebScriptHostManager _scriptHostManager;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly ILogger _logger;
         private bool _disposed = false;
         private Task _hostTask;
 
-        public WebJobsScriptHostService(WebScriptHostManager scriptHostManager, ILoggerFactory loggerFactory)
+        public WebJobsScriptHostService(WebScriptHostManager scriptHostManager, ILinuxContainerInitializationService linuxContainerInitializationService, ILoggerFactory loggerFactory)
         {
             _scriptHostManager = scriptHostManager ?? throw new ArgumentException($@"Unable to locate the {nameof(WebScriptHostManager)} service. " +
                     $"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(WebJobsServiceCollectionExtensions.AddWebJobsScriptHost)}' " +
@@ -26,15 +27,20 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             _cancellationTokenSource = new CancellationTokenSource();
             _hostTask = Task.CompletedTask;
+            _linuxContainerInitializationService = linuxContainerInitializationService;
             _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Initializing WebScriptHostManager.");
-            _hostTask = _scriptHostManager.EnsureHostStarted(_cancellationTokenSource.Token);
+            _logger.LogInformation("Initializing Container.");
 
-            return Task.CompletedTask;
+            // Do additional initialization if running inside linux container.
+            await _linuxContainerInitializationService.Run(cancellationToken);
+
+            _logger.LogInformation("Initializing WebScriptHostManager.");
+
+            _hostTask = _scriptHostManager.EnsureHostStarted(_cancellationTokenSource.Token);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
