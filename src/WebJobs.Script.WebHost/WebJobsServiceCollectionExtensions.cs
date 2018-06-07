@@ -122,6 +122,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             builder.Register<IFileSystem>(_ => FileUtility.Instance).SingleInstance();
             builder.RegisterType<VirtualFileSystem>();
             builder.RegisterType<VirtualFileSystemMiddleware>();
+            builder.RegisterType<EncyptedHostAssignmentContextReader>().As<IEncyptedHostAssignmentContextReader>().SingleInstance();
+            builder.RegisterType<LinuxContainerInitializationService>().As<ILinuxContainerInitializationService>().SingleInstance();
 
             // Populate the container builder with registered services.
             // Doing this here will cause any services registered in the service collection to
