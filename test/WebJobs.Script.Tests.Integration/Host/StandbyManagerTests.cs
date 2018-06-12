@@ -28,6 +28,8 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
+    [Trait(TestTraits.Category, TestTraits.EndToEnd)]
+    [Trait(TestTraits.Group, TestTraits.StandbyModeTests)]
     public class StandbyManagerTests : IDisposable
     {
         private readonly ScriptSettingsManager _settingsManager;
@@ -108,6 +110,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 { EnvironmentSettingNames.AzureWebsiteContainerReady, null },
                 { EnvironmentSettingNames.AzureWebsiteSku, "Dynamic" },
                 { EnvironmentSettingNames.AzureWebsiteHomePath, null },
+                { EnvironmentSettingNames.AzureWebsiteConfigurationReady, null },
                 { EnvironmentSettingNames.AzureWebsiteInstanceId, "87654639876900123453445678890144" },
                 { "AzureWebEncryptionKey", "0F75CA46E7EBDD39E4CA6B074D1F9A5972B849A55F91A248" }
             };
@@ -121,6 +124,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 // now specialize the host
                 ScriptSettingsManager.Instance.SetSetting(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "0");
                 ScriptSettingsManager.Instance.SetSetting(EnvironmentSettingNames.AzureWebsiteContainerReady, "1");
+                ScriptSettingsManager.Instance.SetSetting(EnvironmentSettingNames.AzureWebsiteConfigurationReady, "1");
 
                 Assert.False(WebScriptHostManager.InStandbyMode);
                 Assert.True(ScriptSettingsManager.Instance.ContainerReady);
@@ -164,6 +168,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 { EnvironmentSettingNames.AzureWebsiteName, "TestApp" },
                 { EnvironmentSettingNames.ContainerEncryptionKey, encryptionKey },
                 { EnvironmentSettingNames.AzureWebsiteContainerReady, null },
+                { EnvironmentSettingNames.AzureWebsiteConfigurationReady, null },
                 { EnvironmentSettingNames.AzureWebsiteSku, "Dynamic" },
                 { EnvironmentSettingNames.AzureWebsiteZipDeployment, null },
                 { "AzureWebEncryptionKey", "0F75CA46E7EBDD39E4CA6B074D1F9A5972B849A55F91A248" }

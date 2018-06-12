@@ -15,6 +15,7 @@ using System.Web.Http;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.WebJobs.Script.Tests;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
@@ -23,8 +24,8 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
 {
-    [Trait("Category", "E2E")]
-    [Trait("E2E", nameof(NodeEndToEndTests))]
+    [Trait(TestTraits.Category, TestTraits.EndToEnd)]
+    [Trait(TestTraits.Group, nameof(NodeEndToEndTests))]
     public class NodeEndToEndTests : EndToEndTestsBase<NodeEndToEndTests.TestFixture>
     {
         public NodeEndToEndTests(TestFixture fixture) : base(fixture)
@@ -64,12 +65,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
             Assert.Equal($"test-input-node/{name}", (string)blobMetadata["path"]);
 
             var metadata = (JObject)blobMetadata["metadata"];
-            Assert.Equal("TestMetadataValue", (string)metadata["TestMetadataKey"]);
+            Assert.Equal("TestMetadataValue", (string)metadata["testMetadataKey"]);
 
             var properties = (JObject)blobMetadata["properties"];
-            Assert.Equal("application/octet-stream", (string)properties["ContentType"]);
-            Assert.Equal("BlockBlob", Enum.Parse(typeof(BlobType), (string)properties["BlobType"]).ToString());
-            Assert.Equal(5, properties["Length"]);
+            Assert.Equal("application/octet-stream", (string)properties["contentType"]);
+            Assert.Equal("BlockBlob", Enum.Parse(typeof(BlobType), (string)properties["blobType"]).ToString());
+            Assert.Equal(5, properties["length"]);
 
             string invocationId = (string)testResult["invocationId"];
             Guid.Parse(invocationId);
