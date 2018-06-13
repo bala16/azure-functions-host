@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Initializing LinuxContainerInitializationService.");
+            _logger.LogInformation(">Initializing LinuxContainerInitializationService.");
             _cancellationToken = cancellationToken;
 
             // The service should be registered in IsLinuxContainerEnvironment only. But do additional check here.
