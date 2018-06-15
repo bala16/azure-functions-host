@@ -69,10 +69,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, WebJobsScriptHostService>());
 
-            if (ScriptSettingsManager.Instance.IsLinuxContainerEnvironment)
-            {
-                services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, LinuxContainerInitializationHostService>());
-            }
+//            if (ScriptSettingsManager.Instance.IsLinuxContainerEnvironment)
+//            {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, LinuxContainerInitializationHostService>());
+//            }
 
             // TODO: This is a direct port from the current model.
             // Some of those services (or the way we register them) may need to change
