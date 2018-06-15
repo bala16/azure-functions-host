@@ -9,6 +9,7 @@ using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
         public ArmAuthenticationHandler(IOptionsMonitor<ArmAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock)
             : base(options, logger, encoder, clock)
         {
-            _logger = logger.CreateLogger<ArmAuthenticationHandler>();
+            _logger = logger.CreateLogger(LogCategories.Startup);
         }
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -39,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
             string token = null;
             if (!Context.Request.Headers.TryGetValue(ArmTokenHeaderName, out StringValues values))
             {
+                _logger.LogWarning("No x-ms-site-restricted-token specified");
                 return AuthenticateResult.NoResult();
             }
 
@@ -46,9 +48,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
 
             try
             {
-                if (!SimpleWebTokenHelper.ValidateToken(token, Clock))
+                if (!SimpleWebTokenHelper.ValidateToken(token, Clock, _logger))
                 {
+                    _logger.LogError("ARM authentication token validation failed.");
                     return AuthenticateResult.Fail("Token validation failed.");
+                }
+                else
+                {
+                    _logger.LogInformation("Validate Token success");
                 }
 
                 var claims = new List<Claim>

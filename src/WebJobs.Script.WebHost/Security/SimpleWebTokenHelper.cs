@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
 {
@@ -88,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
         {
             try
             {
-                return ValidateToken(token, systemClock);
+                return ValidateToken(token, systemClock, null);
             }
             catch
             {
@@ -96,14 +97,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
             }
         }
 
-        public static bool ValidateToken(string token, ISystemClock systemClock)
+        public static bool ValidateToken(string token, ISystemClock systemClock, ILogger logger)
         {
             // Use WebSiteAuthEncryptionKey if available else fallback to ContainerEncryptionKey.
             // Until the container is specialized to a specific site WebSiteAuthEncryptionKey will not be available.
             byte[] key;
             if (!TryGetEncryptionKey(EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key, false))
             {
-                TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key);
+                if (TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key))
+                {
+                    logger.LogInformation("Using EnvironmentSettingNames.ContainerEncryptionKey");
+                }
+                else
+                {
+                    logger.LogInformation("EnvironmentSettingNames.ContainerEncryptionKey is also unavailable");
+                }
+            }
+            else
+            {
+                logger.LogInformation("Using EnvironmentSettingNames.WebSiteAuthEncryptionKey");
             }
 
             var data = Decrypt(key, token);
@@ -116,7 +128,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
                  // [["key1", "value1"], ["key2", "value2"]]
                  .ToDictionary(k => k[0], v => v[1]);
 
-            return parsedToken.ContainsKey("exp") && systemClock.UtcNow.UtcDateTime < new DateTime(long.Parse(parsedToken["exp"]));
+            var containsKey = parsedToken.ContainsKey("exp");
+            var isValid = systemClock.UtcNow.UtcDateTime < new DateTime(long.Parse(parsedToken["exp"]));
+            logger.LogInformation("Token contains exp " + containsKey + " Is valid " + isValid);
+            return containsKey && isValid;
         }
 
         private static string GetSHA256Base64String(byte[] key)
