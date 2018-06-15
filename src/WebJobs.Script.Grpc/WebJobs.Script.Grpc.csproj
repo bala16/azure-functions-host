@@ -14,14 +14,15 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.3.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.5.1" />
     <PackageReference Include="Google.Protobuf.Tools" Version="3.5.1" />
-    <PackageReference Include="Grpc.Core" Version="1.4.1" />
-    <PackageReference Include="Grpc.Tools" Version="1.4.1">
+    <PackageReference Include="Grpc.Core" Version="1.12.0" />
+    <PackageReference Include="Grpc.Tools" Version="1.12.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -29,6 +30,12 @@
   
   <ItemGroup>
     <Folder Include="Messages\DotNet\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>C:\Program Files\dotnet\sdk\NuGetFallbackFolder\newtonsoft.json\11.0.2\lib\netstandard2.0\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
   
   <Target Name="GenerateProtoFiles" BeforeTargets="BeforeBuild" Inputs="azure-functions-language-worker-protobuf/src/proto/FunctionRpc.proto" Outputs="Messages/DotNet/FunctionRpc.cs;Messages/DotNet/FunctionRpcGrpc.cs">

@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
         /// <summary>
         /// Gets a value indicating whether we are running in a Linux container
         /// </summary>
-        public bool IsLinuxContainerEnvironment
+        public virtual bool IsLinuxContainerEnvironment
         {
             get
             {
@@ -47,8 +47,6 @@ namespace Microsoft.Azure.WebJobs.Script.Config
         public virtual bool IsZipDeployment => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteZipDeployment));
 
         public virtual bool ContainerReady => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteContainerReady));
-
-        public virtual bool ConfigurationReady => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteConfigurationReady));
 
         public string WebsiteSku => GetSetting(EnvironmentSettingNames.AzureWebsiteSku);
 
