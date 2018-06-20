@@ -121,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private async Task ApplyContext(HostAssignmentContext assignmentContext)
         {
             _logger.LogInformation($"Applying {assignmentContext.Environment.Count} app setting(s)");
-            assignmentContext.ApplyAppSettings();
+            assignmentContext.ApplyAppSettings(_logger);
 
             if (!string.IsNullOrEmpty(assignmentContext.ZipUrl))
             {

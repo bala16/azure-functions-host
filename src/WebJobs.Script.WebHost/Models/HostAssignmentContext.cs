@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Script.Config;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
@@ -51,11 +52,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
             return SiteId == other.SiteId && LastModifiedTime.CompareTo(other.LastModifiedTime) == 0;
         }
 
-        public void ApplyAppSettings()
+        public void ApplyAppSettings(ILogger logger)
         {
+            var found = false;
             foreach (var pair in Environment)
             {
+                if (pair.Key.Equals("AzureWebEncryptionKey", StringComparison.OrdinalIgnoreCase))
+                {
+                    found = true;
+                    logger.LogInformation("AzureWebEncryptionKey {0} : {1}", pair.Key, pair.Value);
+                }
                 System.Environment.SetEnvironmentVariable(pair.Key, pair.Value);
+            }
+
+            if (!found)
+            {
+                logger.LogInformation("AzureWebEncryptionKey NOT FOUND");
             }
         }
     }
