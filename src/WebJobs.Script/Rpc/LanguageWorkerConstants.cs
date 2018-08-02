@@ -23,6 +23,10 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
         public const string WorkerDescriptionDefaultExecutablePath = "defaultExecutablePath";
         public const string WorkerDescriptionDefaultWorkerPath = "defaultWorkerPath";
         public const string WorkerDescription = "Description";
-        public const string WorkerDescriptionArguments = "Arguments";
+        public const string WorkerDescriptionArguments = "arguments";
+
+        // Profiles
+        public const string WorkerDescriptionProfiles = "profiles";
+        public const string WorkerDescriptionAppServiceEnvProfileName = "AppServiceEnvironment";
     }
 }

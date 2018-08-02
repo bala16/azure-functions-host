@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +12,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
     {
         private readonly Func<string, LogLevel, bool> _filter;
         private IList<LogMessage> _logMessages = new List<LogMessage>();
+
+        // protect against changes to _logMessages while enumerating
+        private object _syncLock = new object();
 
         public TestLogger(string category, Func<string, LogLevel, bool> filter = null)
         {
@@ -32,9 +34,21 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             return _filter?.Invoke(Category, logLevel) ?? true;
         }
 
-        public IList<LogMessage> GetLogMessages() => _logMessages.ToList();
+        public IList<LogMessage> GetLogMessages()
+        {
+            lock (_syncLock)
+            {
+                return _logMessages.ToList();
+            }
+        }
 
-        public void ClearLogMessages() => _logMessages.Clear();
+        public void ClearLogMessages()
+        {
+            lock (_syncLock)
+            {
+                _logMessages.Clear();
+            }
+        }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
@@ -54,7 +68,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 Timestamp = DateTime.UtcNow
             };
 
-            _logMessages.Add(logMessage);
+            lock (_syncLock)
+            {
+                _logMessages.Add(logMessage);
+            }
         }
     }
 
