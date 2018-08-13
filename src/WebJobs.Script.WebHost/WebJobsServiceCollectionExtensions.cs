@@ -5,6 +5,7 @@ using System;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using Autofac;
 using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
@@ -88,6 +89,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 if (settingsManager.IsLinuxContainerEnvironment)
                 {
                     return new LinuxContainerEventGenerator();
+                }
+                else if (settingsManager.IsLinuxAppServiceEnvironment)
+                {
+                    return new LinuxAppServiceEventGenerator();
                 }
                 else
                 {

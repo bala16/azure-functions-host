@@ -204,6 +204,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 scriptHostConfig.HostConfig.DashboardConnectionString = null;
             }
 
+            scriptHostConfig.FileLoggingMode = FileLoggingMode.Always;
             scriptHostConfig.HostConfig.HostId = Utility.GetDefaultHostId(_settingsManager, scriptHostConfig);
 
             return scriptHostConfig;

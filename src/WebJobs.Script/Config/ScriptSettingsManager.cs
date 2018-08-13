@@ -42,6 +42,8 @@ namespace Microsoft.Azure.WebJobs.Script.Config
             }
         }
 
+        public virtual bool IsLinuxAppServiceEnvironment => IsAppServiceEnvironment && !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.FunctionsLogsMountPath));
+
         public bool IsRemoteDebuggingEnabled => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.RemoteDebuggingPort));
 
         public virtual bool IsZipDeployment => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteZipDeployment));
