@@ -41,7 +41,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 // Running in App Service
                 string home = settingsManager.GetSetting(EnvironmentSettingNames.AzureWebsiteHomePath);
                 settings.ScriptPath = Path.Combine(home, "site", "wwwroot");
-                settings.LogPath = Path.Combine(home, "LogFiles", "Application", "Functions");
+
+                if (settingsManager.IsLinuxAppServiceEnvironment)
+                {
+                    settings.LogPath = settingsManager.GetSetting(EnvironmentSettingNames.FunctionsLogsMountPath);
+                }
+                else
+                {
+                    settings.LogPath = Path.Combine(home, "LogFiles", "Application", "Functions");
+                }
                 settings.SecretsPath = Path.Combine(home, "data", "Functions", "secrets");
                 settings.TestDataPath = Path.Combine(home, "data", "Functions", "sampledata");
             }
