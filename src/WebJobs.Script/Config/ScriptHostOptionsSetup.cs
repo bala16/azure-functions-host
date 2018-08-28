@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
             options.WatchDirectories.Add("node_modules");
 
             // Set default logging mode
-            options.FileLoggingMode = FileLoggingMode.DebugOnly;
+            options.FileLoggingMode = FileLoggingMode.Always; //For testing
 
             // Bind to all configuration properties
             IConfigurationSection jobHostSection = _configuration.GetSection(ConfigurationSectionNames.JobHost);
