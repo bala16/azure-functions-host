@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 })
                 .Build();
 
-            var provider = new ScriptHostIdProvider(config, environment, new OptionsWrapper<ScriptJobHostOptions>(options));
+            var provider = new ScriptHostIdProvider(config, environment, null);
 
             string hostId = await provider.GetHostIdAsync(CancellationToken.None);
 
@@ -49,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             var environment = new TestEnvironment();
             environment.SetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteName, siteName);
 
-            string hostId = ScriptHostIdProvider.GetDefaultHostId(environment, config);
+            string hostId = ScriptHostIdProvider.GetDefaultHostId(environment, null);
             Assert.Equal(expected, hostId);
         }
 
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             var environmentMock = new Mock<IEnvironment>();
 
-            string hostId = ScriptHostIdProvider.GetDefaultHostId(environmentMock.Object, config);
+            string hostId = ScriptHostIdProvider.GetDefaultHostId(environmentMock.Object, null);
 
             // This suffix is a stable hash code derived from the "RootScriptPath" string passed in the configuration.
             // We're using the literal here as we want this test to fail if this compuation ever returns something different.
