@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Loggers;
@@ -11,9 +11,12 @@ using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.WebJobs.Script.Tests;
 using Moq;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
@@ -29,52 +32,54 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _metricsLogger = new TestMetricsLogger();
             _testLoggerProvider = new TestLoggerProvider();
 
-            var scriptHostConfiguration = new ScriptHostConfiguration
-            {
-                HostConfig = new JobHostConfiguration(),
-                FileLoggingMode = FileLoggingMode.Always,
-                FileWatchingEnabled = true
-            };
-
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(_testLoggerProvider);
-            scriptHostConfiguration.HostConfig.LoggerFactory = loggerFactory;
-
-            scriptHostConfiguration.HostConfig.AddService<IMetricsLogger>(_metricsLogger);
 
             var eventManager = new ScriptEventManager();
 
-            var host = new Mock<ScriptHost>(new NullScriptHostEnvironment(), eventManager, scriptHostConfiguration, null, null, null);
-            host.CallBase = true;
-
-            host.SetupGet(h => h.IsPrimary).Returns(true);
-
-            var funcDescriptor = new FunctionDescriptor();
-            var funcDescriptors = new Collection<FunctionDescriptor>();
-            funcDescriptors.Add(funcDescriptor);
-            host.SetupGet(h => h.Functions).Returns(funcDescriptors);
-
             var metadata = new FunctionMetadata
             {
-                Name = "TestFunction"
+                Name = "TestFunction",
+                ScriptFile = "index.js",
+                Language = "node"
             };
-            _invoker = new MockInvoker(host.Object, _metricsLogger, metadata);
-            funcDescriptor.Metadata = metadata;
-            funcDescriptor.Invoker = _invoker;
-            funcDescriptor.Name = metadata.Name;
+            JObject binding = JObject.FromObject(new
+            {
+                type = "manualTrigger",
+                name = "manual",
+                direction = "in"
+            });
+            metadata.Bindings.Add(BindingMetadata.Create(binding));
+
+            var host = new HostBuilder()
+                .ConfigureDefaultTestWebScriptHost()
+                .ConfigureServices(s =>
+                {
+                    var metadataManager = new MockMetadataManager(new[] { metadata });
+                    s.AddSingleton<IFunctionMetadataManager>(metadataManager);
+                })
+                .Build();
+
+            var scriptHost = host.GetScriptHost();
+            scriptHost.InitializeAsync().Wait();
+
+            _invoker = new MockInvoker(scriptHost, _metricsLogger, metadata, loggerFactory);
         }
 
         [Fact]
-        public void LogOnPrimaryHost_WritesExpectedLogs()
+        public void LogOnPrimaryHost_WritesLogWithExpectedProperty()
         {
             _testLoggerProvider.ClearAllLogMessages();
 
-            _invoker.LogOnPrimaryHost("Test message", LogLevel.Information);
+            string guid = Guid.NewGuid().ToString();
+            _invoker.LogOnPrimaryHost(guid, LogLevel.Information);
 
-            Assert.Equal(1, _testLoggerProvider.GetAllLogMessages().Count());
-            var log = _testLoggerProvider.GetAllLogMessages().ElementAt(0);
-            Assert.Equal("Test message", log.FormattedMessage);
-            Assert.Equal(LogLevel.Information, log.Level);
+            var logMessage = _testLoggerProvider.GetAllLogMessages().Single(m => m.FormattedMessage.Contains(guid));
+            Assert.Equal(LogLevel.Information, logMessage.Level);
+
+            // Verify that the correct property is attached to the message. It's up to a Logger whether
+            // they log messages with this value or not.
+            Assert.Contains(logMessage.State, s => s.Key == ScriptConstants.LogPropertyPrimaryHostKey && (bool)s.Value == true);
         }
 
         [Fact]
@@ -190,11 +195,14 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             private readonly FunctionInstanceLogger _fastLogger;
 
-            public MockInvoker(ScriptHost host, IMetricsLogger metrics, FunctionMetadata metadata) : base(host, metadata)
+            public MockInvoker(ScriptHost host, IMetricsLogger metrics, FunctionMetadata metadata, ILoggerFactory loggerFactory)
+                : base(host, metadata, loggerFactory)
             {
-                _fastLogger = new FunctionInstanceLogger(
-                    (name) => this.Host.GetFunctionOrNull(name),
-                    metrics);
+                var metadataManagerMock = new Mock<IFunctionMetadataManager>();
+                metadataManagerMock.Setup(m => m.Functions)
+                    .Returns(new[] { metadata }.ToImmutableArray());
+                var proxyMetadataManagerMock = new Mock<IProxyMetadataManager>();
+                _fastLogger = new FunctionInstanceLogger(metadataManagerMock.Object, proxyMetadataManagerMock.Object,  metrics);
             }
 
             protected override async Task<object> InvokeCore(object[] parameters, FunctionInvocationContext context)
@@ -236,6 +244,21 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             public int Delay { get; set; } = 500;
 
             public bool Throw { get; set; }
+        }
+
+        private class MockMetadataManager : IFunctionMetadataManager
+        {
+            private readonly ICollection<FunctionMetadata> _functions;
+
+            public MockMetadataManager(ICollection<FunctionMetadata> functions)
+            {
+                _functions = functions;
+            }
+
+            public ImmutableDictionary<string, ImmutableArray<string>> Errors =>
+                ImmutableDictionary<string, ImmutableArray<string>>.Empty;
+
+            public ImmutableArray<FunctionMetadata> Functions => _functions.ToImmutableArray();
         }
     }
 }

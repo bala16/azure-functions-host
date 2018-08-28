@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Binding;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.Extensibility;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.Extensions.Logging;
@@ -45,13 +46,16 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             Collection<FunctionBinding> outputBindings,
             IFunctionEntryPointResolver functionEntryPointResolver,
             ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver> compilationServiceFactory,
+            ILoggerFactory loggerFactory,
+            IMetricsLogger metricsLogger,
+            ICollection<IScriptBindingProvider> bindingProviders,
             IFunctionMetadataResolver metadataResolver = null)
-            : base(host, functionMetadata)
+            : base(host, functionMetadata, loggerFactory)
         {
-            _metricsLogger = Host.ScriptConfig.HostConfig.GetService<IMetricsLogger>();
+            _metricsLogger = metricsLogger;
             _functionEntryPointResolver = functionEntryPointResolver;
-            _metadataResolver = metadataResolver ?? CreateMetadataResolver(host, functionMetadata, FunctionLogger);
-            _compilationService = compilationServiceFactory.CreateService(functionMetadata.ScriptType, _metadataResolver);
+            _metadataResolver = metadataResolver ?? CreateMetadataResolver(host, bindingProviders, functionMetadata, FunctionLogger);
+            _compilationService = compilationServiceFactory.CreateService(functionMetadata.Language, _metadataResolver);
             _inputBindings = inputBindings;
             _outputBindings = outputBindings;
             _triggerInputName = functionMetadata.Bindings.FirstOrDefault(b => b.IsTrigger).Name;
@@ -71,9 +75,10 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             _restorePackages = _restorePackages.Debounce();
         }
 
-        private static IFunctionMetadataResolver CreateMetadataResolver(ScriptHost host, FunctionMetadata functionMetadata, ILogger logger)
+        private static IFunctionMetadataResolver CreateMetadataResolver(ScriptHost host, ICollection<IScriptBindingProvider> bindingProviders,
+            FunctionMetadata functionMetadata, ILogger logger)
         {
-            return new ScriptFunctionMetadataResolver(functionMetadata.ScriptFile, host.ScriptConfig.BindingProviders, logger);
+            return new ScriptFunctionMetadataResolver(functionMetadata.ScriptFile, bindingProviders, logger);
         }
 
         private void InitializeFileWatcher()

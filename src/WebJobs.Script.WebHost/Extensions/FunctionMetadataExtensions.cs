@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Extensions
         /// <param name="request">Current HttpRequest</param>
         /// <param name="config">ScriptHostConfig</param>
         /// <returns>Promise of a FunctionMetadataResponse</returns>
-        public static async Task<FunctionMetadataResponse> ToFunctionMetadataResponse(this FunctionMetadata functionMetadata, HttpRequest request, ScriptHostConfiguration config, IWebJobsRouter router = null)
+        public static async Task<FunctionMetadataResponse> ToFunctionMetadataResponse(this FunctionMetadata functionMetadata, HttpRequest request, ScriptJobHostOptions config, IWebJobsRouter router = null)
         {
             var functionPath = Path.Combine(config.RootScriptPath, functionMetadata.Name);
             var functionMetadataFilePath = Path.Combine(functionPath, ScriptConstants.FunctionMetadataFileName);
@@ -49,6 +49,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Extensions
                 IsDirect = functionMetadata.IsDirect,
                 IsDisabled = functionMetadata.IsDisabled,
                 IsProxy = functionMetadata.IsProxy,
+                Language = functionMetadata.Language,
                 InvokeUrlTemplate = GetFunctionInvokeUrlTemplate(baseUrl, functionMetadata.Name, router)
             };
             return response;
@@ -62,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Extensions
         /// <param name="functionMetadata">FunctionMetadata object to convert to a JObject.</param>
         /// <param name="config">ScriptHostConfiguration to read RootScriptPath from.</param>
         /// <returns>JObject that represent the trigger for scale controller to consume</returns>
-        public static async Task<JObject> ToFunctionTrigger(this FunctionMetadata functionMetadata, ScriptHostConfiguration config)
+        public static async Task<JObject> ToFunctionTrigger(this FunctionMetadata functionMetadata, ScriptJobHostOptions config)
         {
             // Only look at the function if it's not disabled
             if (!functionMetadata.IsDisabled)
@@ -90,10 +91,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Extensions
             return null;
         }
 
-        public static string GetTestDataFilePath(this FunctionMetadata functionMetadata, ScriptHostConfiguration config) =>
+        public static string GetTestDataFilePath(this FunctionMetadata functionMetadata, ScriptJobHostOptions config) =>
             GetTestDataFilePath(functionMetadata.Name, config);
 
-        public static string GetTestDataFilePath(string functionName, ScriptHostConfiguration config) =>
+        public static string GetTestDataFilePath(string functionName, ScriptJobHostOptions config) =>
             Path.Combine(config.TestDataPath, $"{functionName}.dat");
 
         private static async Task<JObject> GetFunctionConfig(string path)
@@ -116,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Extensions
             return new JObject();
         }
 
-        private static async Task<string> GetTestData(string testDataPath, ScriptHostConfiguration config)
+        private static async Task<string> GetTestData(string testDataPath, ScriptJobHostOptions config)
         {
             if (!File.Exists(testDataPath))
             {

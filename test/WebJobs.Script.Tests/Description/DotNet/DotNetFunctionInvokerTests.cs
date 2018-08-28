@@ -19,7 +19,10 @@ using Microsoft.Azure.WebJobs.Script.Extensibility;
 using Microsoft.Azure.WebJobs.Script.Tests.Properties;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.WebJobs.Script.Tests;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -67,17 +70,18 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 ScriptFile = filePath,
                 FunctionDirectory = Path.GetDirectoryName(filePath),
                 Name = functionName,
-                ScriptType = ScriptType.CSharp
+                Language = DotNetScriptTypes.CSharp
             };
 
             metadata.Bindings.Add(new BindingMetadata() { Name = "Test", Type = "ManualTrigger" });
 
-            var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<Script.Binding.FunctionBinding>(),
-                new Collection<FunctionBinding>(), dependencies.EntrypointResolver.Object, dependencies.CompilationServiceFactory.Object);
+            var invoker = new DotNetFunctionInvoker(dependencies.Host, metadata, new Collection<FunctionBinding>(), new Collection<FunctionBinding>(),
+                dependencies.EntrypointResolver.Object, dependencies.CompilationServiceFactory.Object, dependencies.LoggerFactory, dependencies.MetricsLogger,
+                new Collection<IScriptBindingProvider>());
 
             // Send file change notification to trigger a reload
             var fileEventArgs = new FileSystemEventArgs(WatcherChangeTypes.Changed, Path.GetTempPath(), Path.Combine(Path.GetFileName(rootFunctionsFolder), Path.GetFileName(filePath)));
-            dependencies.Host.Object.EventManager.Publish(new FileEvent(EventSources.ScriptFiles, fileEventArgs));
+            dependencies.Host.EventManager.Publish(new FileEvent(EventSources.ScriptFiles, fileEventArgs));
 
             LogMessage[] logMessages = null;
             var loggerProvider = dependencies.LoggerProvider;
@@ -154,15 +158,16 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     ScriptFile = filePath,
                     FunctionDirectory = Path.GetDirectoryName(filePath),
                     Name = Guid.NewGuid().ToString(),
-                    ScriptType = ScriptType.CSharp
+                    Language = DotNetScriptTypes.CSharp
                 };
 
                 metadata.Bindings.Add(new BindingMetadata() { Name = "myQueueItem", Type = "ManualTrigger" });
 
                 var testBinding = new Mock<FunctionBinding>(null, new BindingMetadata() { Name = "TestBinding", Type = "blob" }, FileAccess.Write);
 
-                var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
-                    new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new DotNetCompilationServiceFactory(null));
+                var invoker = new DotNetFunctionInvoker(dependencies.Host, metadata, new Collection<FunctionBinding>(),
+                    new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new DotNetCompilationServiceFactory(null),
+                    dependencies.LoggerFactory, dependencies.MetricsLogger, new Collection<IScriptBindingProvider>());
 
                 try
                 {
@@ -197,11 +202,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 string rootFunctionsFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
                 Directory.CreateDirectory(rootFunctionsFolder);
 
-                // Create the invoker dependencies and setup the appropriate method to throw the exception
-                RunDependencies dependencies = CreateDependencies();
-
                 // Set the host to secondary
-                dependencies.Host.SetupGet(h => h.IsPrimary).Returns(false);
+                var stateProviderMock = new Mock<IPrimaryHostStateProvider>();
+                stateProviderMock.Setup(m => m.IsPrimary).Returns(false);
+
+                // Create the invoker dependencies and setup the appropriate method to throw the exception
+                RunDependencies dependencies = CreateDependencies(configureServices: s => { s.AddSingleton(stateProviderMock.Object); });
 
                 // Create a dummy file to represent our function
                 string filePath = Path.Combine(rootFunctionsFolder, Guid.NewGuid().ToString() + ".csx");
@@ -212,15 +218,16 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     ScriptFile = filePath,
                     FunctionDirectory = Path.GetDirectoryName(filePath),
                     Name = Guid.NewGuid().ToString(),
-                    ScriptType = ScriptType.CSharp
+                    Language = DotNetScriptTypes.CSharp
                 };
 
                 metadata.Bindings.Add(new BindingMetadata() { Name = "myQueueItem", Type = "ManualTrigger" });
 
                 var testBinding = new Mock<FunctionBinding>(null, new BindingMetadata() { Name = "TestBinding", Type = "blob" }, FileAccess.Write);
 
-                var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
-                    new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new DotNetCompilationServiceFactory(null));
+                var invoker = new DotNetFunctionInvoker(dependencies.Host, metadata, new Collection<FunctionBinding>(),
+                    new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new DotNetCompilationServiceFactory(null),
+                    dependencies.LoggerFactory, dependencies.MetricsLogger, new Collection<IScriptBindingProvider>());
                 try
                 {
                     await invoker.GetFunctionTargetAsync();
@@ -254,9 +261,14 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             };
             FunctionSignature signature = new FunctionSignature("Test", "Test", ImmutableArray.CreateRange<FunctionParameter>(parameters), "Test", false);
 
+            var host = new HostBuilder().ConfigureDefaultTestWebScriptHost(b =>
+            {
+                b.AddAzureStorage();
+            }).Build();
+
             Collection<FunctionBinding> inputBindings = new Collection<FunctionBinding>()
             {
-                TestHelpers.CreateTestBinding(new JObject
+                TestHelpers.CreateBindingFromHost(host, new JObject
                 {
                     { "type", "blobTrigger" },
                     { "name", "input" },
@@ -264,9 +276,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     { "path", "test" }
                 })
             };
+
             Collection<FunctionBinding> outputBindings = new Collection<FunctionBinding>()
             {
-                TestHelpers.CreateTestBinding(new JObject
+                TestHelpers.CreateBindingFromHost(host, new JObject
                 {
                     { "type", "blob" },
                     { "name", ScriptConstants.SystemReturnParameterBindingName },
@@ -274,6 +287,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     { "path", "test/test" }
                 })
             };
+
             var diagnostics = DotNetFunctionInvoker.ValidateFunctionBindingArguments(signature, "input", inputBindings, outputBindings);
             Assert.Equal(0, diagnostics.Count());
         }
@@ -281,18 +295,19 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         [Fact]
         public async Task CompilerError_IsRetried_UpToLimit()
         {
-            // Create the invoker dependencies and setup the appropriate method to throw the exception
-            RunDependencies dependencies = CreateDependencies();
-
             // Set the host to primary
-            dependencies.Host.SetupGet(h => h.IsPrimary).Returns(true);
+            var stateProviderMock = new Mock<IPrimaryHostStateProvider>();
+            stateProviderMock.Setup(m => m.IsPrimary).Returns(false);
+
+            // Create the invoker dependencies and setup the appropriate method to throw the exception
+            RunDependencies dependencies = CreateDependencies(configureServices: s => { s.AddSingleton(stateProviderMock.Object); });
 
             var metadata = new FunctionMetadata
             {
                 ScriptFile = "run.csx",
                 FunctionDirectory = "c:\\somedir",
                 Name = Guid.NewGuid().ToString(),
-                ScriptType = ScriptType.CSharp
+                Language = DotNetScriptTypes.CSharp
             };
 
             metadata.Bindings.Add(new BindingMetadata() { Name = "myQueueItem", Type = "ManualTrigger" });
@@ -301,18 +316,21 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             var dotNetCompilation = new Mock<IDotNetCompilation>();
             var dotnetCompilationService = new Mock<ICompilationService<IDotNetCompilation>>();
-            dotnetCompilationService.SetupSequence(s => s.GetFunctionCompilationAsync(It.IsAny<FunctionMetadata>()))
-            .ThrowsAsync(new CompilationServiceException("1"))
-            .ThrowsAsync(new CompilationServiceException("2"))
-            .ThrowsAsync(new CompilationServiceException("3"))
-            .ThrowsAsync(new CompilationServiceException("4")); // This should not be reached
+            dotnetCompilationService
+                .SetupSequence(s => s.GetFunctionCompilationAsync(It.IsAny<FunctionMetadata>()))
+                .ThrowsAsync(new CompilationServiceException("1"))
+                .ThrowsAsync(new CompilationServiceException("2"))
+                .ThrowsAsync(new CompilationServiceException("3"))
+                .ThrowsAsync(new CompilationServiceException("4")); // This should not be reached
 
             var compilationFactory = new Mock<ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver>>();
-            compilationFactory.Setup(f => f.CreateService(ScriptType.CSharp, It.IsAny<IFunctionMetadataResolver>())).Returns(dotnetCompilationService.Object);
+            compilationFactory
+                .Setup(f => f.CreateService(DotNetScriptTypes.CSharp, It.IsAny<IFunctionMetadataResolver>()))
+                .Returns(dotnetCompilationService.Object);
 
-            var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
+            var invoker = new DotNetFunctionInvoker(dependencies.Host, metadata, new Collection<FunctionBinding>(),
                 new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(),
-                compilationFactory.Object, new Mock<IFunctionMetadataResolver>().Object);
+                compilationFactory.Object, dependencies.LoggerFactory, dependencies.MetricsLogger, new Collection<IScriptBindingProvider>(), new Mock<IFunctionMetadataResolver>().Object);
 
             var arguments = new object[]
             {
@@ -346,10 +364,13 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             using (var tempDirectory = new TempDirectory())
             {
-                var environmentMock = new Mock<IScriptHostEnvironment>();
+                var environmentMock = new Mock<IScriptJobHostEnvironment>();
 
                 // Create the invoker dependencies and setup the appropriate method to throw the exception
-                RunDependencies dependencies = CreateDependencies(environment: environmentMock.Object);
+                RunDependencies dependencies = CreateDependencies(s =>
+                {
+                    s.AddSingleton<IScriptJobHostEnvironment>(environmentMock.Object);
+                });
 
                 // Create a dummy file to represent our function
                 string filePath = Path.Combine(tempDirectory.Path, Guid.NewGuid().ToString() + ".csx");
@@ -359,7 +380,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 {
                     ScriptFile = filePath,
                     Name = Guid.NewGuid().ToString(),
-                    ScriptType = ScriptType.CSharp,
+                    Language = DotNetScriptTypes.CSharp,
                 };
 
                 metadata.Bindings.Add(new BindingMetadata { Type = "TestTrigger", Direction = BindingDirection.In });
@@ -370,9 +391,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 var testBinding = new Mock<FunctionBinding>(null, new BindingMetadata() { Name = "TestBinding", Type = "blob" }, FileAccess.Write);
 
-                var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
+                var invoker = new DotNetFunctionInvoker(dependencies.Host, metadata, new Collection<FunctionBinding>(),
                   new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(),
-                  new DotNetCompilationServiceFactory(null), metadataResolver.Object);
+                  new DotNetCompilationServiceFactory(null), dependencies.LoggerFactory, dependencies.MetricsLogger, new Collection<IScriptBindingProvider>(), metadataResolver.Object);
 
                 await invoker.RestorePackagesAsync(true);
 
@@ -384,29 +405,16 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             }
         }
 
-        private RunDependencies CreateDependencies(IScriptHostEnvironment environment = null)
+        // TODO: DI (FACAVAL) Use test helpers to create host and inject services
+        private RunDependencies CreateDependencies(Action<IServiceCollection> configureServices = null)
         {
             var dependencies = new RunDependencies();
-
-            var scriptHostConfiguration = new ScriptHostConfiguration
-            {
-                HostConfig = new JobHostConfiguration(),
-                FileLoggingMode = FileLoggingMode.Always,
-                FileWatchingEnabled = true,
-                BindingProviders = new List<ScriptBindingProvider>()
-            };
 
             TestLoggerProvider loggerProvider = new TestLoggerProvider();
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(loggerProvider);
-            scriptHostConfiguration.HostConfig.LoggerFactory = loggerFactory;
 
             var eventManager = new ScriptEventManager();
-
-            var host = new Mock<ScriptHost>(environment ?? new NullScriptHostEnvironment(), eventManager, scriptHostConfiguration, null, null, null);
-            host.CallBase = true;
-
-            host.SetupGet(h => h.IsPrimary).Returns(true);
             var entrypointResolver = new Mock<IFunctionEntryPointResolver>();
 
             var compilation = new Mock<IDotNetCompilation>();
@@ -420,26 +428,43 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 .ReturnsAsync(compilation.Object);
 
             var compilationServiceFactory = new Mock<ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver>>();
-            compilationServiceFactory.Setup(f => f.CreateService(ScriptType.CSharp, It.IsAny<IFunctionMetadataResolver>()))
+            compilationServiceFactory.Setup(f => f.CreateService(DotNetScriptTypes.CSharp, It.IsAny<IFunctionMetadataResolver>()))
                 .Returns(compilationService.Object);
 
             var metricsLogger = new MetricsLogger();
-            scriptHostConfiguration.HostConfig.AddService<IMetricsLogger>(metricsLogger);
+
+            var hostBuilder = new HostBuilder()
+                .ConfigureDefaultTestWebScriptHost(o =>
+                {
+                    o.ScriptPath = TestHelpers.FunctionsTestDirectory;
+                    o.LogPath = TestHelpers.GetHostLogFileDirectory().Parent.FullName;
+                });
+
+            if (configureServices != null)
+            {
+                hostBuilder.ConfigureServices(configureServices);
+            }
+
+            var host = hostBuilder.Build();
+
+            var scriptHost = host.GetScriptHost();
 
             return new RunDependencies
             {
-                Host = host,
+                Host = scriptHost,
                 EntrypointResolver = entrypointResolver,
                 Compilation = compilation,
                 CompilationService = compilationService,
                 CompilationServiceFactory = compilationServiceFactory,
-                LoggerProvider = loggerProvider
+                LoggerProvider = loggerProvider,
+                LoggerFactory = loggerFactory,
+                MetricsLogger = metricsLogger
             };
         }
 
         private class RunDependencies
         {
-            public Mock<ScriptHost> Host { get; set; }
+            public ScriptHost Host { get; set; }
 
             public Mock<IFunctionEntryPointResolver> EntrypointResolver { get; set; }
 
@@ -450,6 +475,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             public Mock<ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver>> CompilationServiceFactory { get; set; }
 
             public TestLoggerProvider LoggerProvider { get; set; }
+
+            public ILoggerFactory LoggerFactory { get; set; }
+
+            public MetricsLogger MetricsLogger { get; set; }
         }
     }
 }

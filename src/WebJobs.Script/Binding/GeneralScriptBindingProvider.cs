@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Extensibility;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Script.Binding
@@ -22,18 +23,8 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
     {
         private IJobHostMetadataProvider _metadataProvider;
 
-        public GeneralScriptBindingProvider(
-            JobHostConfiguration config,
-            JObject hostMetadata,
-            ILogger logger)
-            : base(config, hostMetadata, logger)
-        {
-        }
-
-        // The constructor is fixed and ScriptBindingProvider are instantated for us by the Script runtime.
-        // Extensions may get registered after this class is instantiated.
-        // So we need a final call that lets us get the tooling snapshot of the graph after all extensions are set.
-        public void CompleteInitialization(IJobHostMetadataProvider metadataProvider)
+        public GeneralScriptBindingProvider(ILogger<GeneralScriptBindingProvider> logger, IJobHostMetadataProvider metadataProvider)
+            : base(logger)
         {
             _metadataProvider = metadataProvider;
         }
@@ -41,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
         public override bool TryCreate(ScriptBindingContext context, out ScriptBinding binding)
         {
             string name = context.Type;
-            var attrType = _metadataProvider.GetAttributeTypeFromName(name);
+            var attrType = _metadataProvider?.GetAttributeTypeFromName(name);
             if (attrType == null)
             {
                 binding = null;

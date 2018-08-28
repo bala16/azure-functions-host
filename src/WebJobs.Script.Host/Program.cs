@@ -2,13 +2,16 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.Azure.WebJobs.Script.Config;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Host
 {
     public static class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             if (args == null)
             {
@@ -21,14 +24,28 @@ namespace Microsoft.Azure.WebJobs.Script.Host
                 rootPath = (string)args[0];
             }
 
-            var config = new ScriptHostConfiguration()
-            {
-                RootScriptPath = rootPath,
-                IsSelfHost = true
-            };
+            var host = new HostBuilder()
+                .SetAzureFunctionsEnvironment()
+                .ConfigureLogging(b =>
+                {
+                    b.SetMinimumLevel(LogLevel.Information);
+                    b.AddConsole();
+                })
+                .AddScriptHost(o =>
+                {
+                    o.ScriptPath = rootPath;
+                    o.LogPath = Path.Combine(Path.GetTempPath(), "functionshost");
+                    o.IsSelfHost = true;
+                })
+                .UseConsoleLifetime()
+                .Build();
 
-            var scriptHostManager = new ScriptHostManager(config);
-            scriptHostManager.RunAndBlock();
+            Console.WriteLine("Starting host");
+
+            using (host)
+            {
+                await host.RunAsync();
+            }
         }
     }
 }

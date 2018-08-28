@@ -29,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             }
         }
 
-        public async Task Invoke(HttpContext context, WebScriptHostManager manager)
+        public async Task Invoke(HttpContext context)
         {
             await _next(context);
 
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
                     };
                 }
 
-                if (!context.Response.HasStarted)
+                if (!context.Response.HasStarted())
                 {
                     var actionContext = new ActionContext
                     {

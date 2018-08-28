@@ -2,12 +2,13 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
-using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Script.Rpc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Xunit;
 
@@ -78,26 +79,36 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.CosmosDB
             Assert.Equal(updatedDoc.Id, doc.Id);
             Assert.NotEqual(doc.ETag, updatedDoc.ETag);
         }
-
     }
 
     public abstract class CosmosDBTestFixture : EndToEndTestFixture
     {
-        protected CosmosDBTestFixture(string rootPath, string testId) :
-            base(rootPath, testId, "Microsoft.Azure.WebJobs.Extensions.CosmosDB", "3.0.0-beta7-10602")
+        protected CosmosDBTestFixture(string rootPath, string testId, string language) :
+            base(rootPath, testId, language, "Microsoft.Azure.WebJobs.Extensions.CosmosDB", "3.0.0-beta9*")
         {
         }
 
         public DocumentClient DocumentClient { get; private set; }
 
-        protected override IEnumerable<string> GetActiveFunctions() => new[] { "CosmosDBTrigger", "CosmosDBIn", "CosmosDBOut" };
+        public override void ConfigureJobHost(IWebJobsBuilder webJobsBuilder)
+        {
+            webJobsBuilder.Services.Configure<ScriptJobHostOptions>(o =>
+            {
+                o.Functions = new[]
+                {
+                    "CosmosDBTrigger",
+                    "CosmosDBIn",
+                    "CosmosDBOut"
+                };
+            });
+        }
 
         public async Task InitializeDocumentClient()
         {
             if (DocumentClient == null)
             {
                 var builder = new System.Data.Common.DbConnectionStringBuilder();
-                builder.ConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString("AzureWebJobsCosmosDBConnectionString");
+                builder.ConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsCosmosDBConnectionString");
                 var serviceUri = new Uri(builder["AccountEndpoint"].ToString());
 
                 DocumentClient = new DocumentClient(serviceUri, builder["AccountKey"].ToString());
@@ -138,9 +149,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.CosmosDB
             await DocumentClient.DeleteDocumentCollectionAsync(leasesCollectionsUri);
         }
 
-        public override void Dispose()
+        public override async Task DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
             DocumentClient?.Dispose();
         }
     }

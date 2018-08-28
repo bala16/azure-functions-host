@@ -11,6 +11,13 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Script.Abstractions;
+using Microsoft.Azure.WebJobs.Script.Rpc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
@@ -54,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     .ToArray());
         }
 
-        public static Task Await(Func<bool> condition, int timeout = 30 * 1000, int pollingInterval = 2 * 1000, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
+        public static Task Await(Func<bool> condition, int timeout = 30 * 1000, int pollingInterval = 50, bool throwWhenDebugging = false, Func<string> userMessageCallback = null)
         {
             return Await(() => Task.FromResult(condition()), timeout, pollingInterval, throwWhenDebugging, userMessageCallback);
         }
@@ -152,6 +159,14 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             }
         }
 
+        public static IConfiguration GetTestConfiguration()
+        {
+            return new ConfigurationBuilder()
+                    .AddEnvironmentVariables()
+                    .AddTestSettings()
+                    .Build();
+        }
+
         // Deleting and recreating a container can result in a 409 as the container name is not
         // immediately available. Instead, use this helper to clear a container.
         public static async Task ClearContainerAsync(CloudBlobContainer container)
@@ -222,6 +237,30 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             {
                 return await sr.ReadToEndAsync();
             }
+        }
+
+        public static IEnumerable<WorkerConfig> GetTestWorkerConfigs()
+        {
+            var nodeWorkerDesc = GetTestWorkerDescription("node", ".js");
+            var javaWorkerDesc = GetTestWorkerDescription("java", ".jar");
+
+            return new List<WorkerConfig>()
+            {
+                new WorkerConfig() { Description = nodeWorkerDesc },
+                new WorkerConfig() { Description = javaWorkerDesc },
+            };
+        }
+
+        public static WorkerDescription GetTestWorkerDescription(string language, string extension)
+        {
+            return new WorkerDescription()
+            {
+                Extensions = new List<string>()
+                 {
+                     { extension }
+                 },
+                Language = language
+            };
         }
     }
 }

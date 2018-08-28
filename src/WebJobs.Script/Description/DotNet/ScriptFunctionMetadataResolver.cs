@@ -42,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 typeof(ILoggerFactory).Assembly.Location, /*Microsoft.Extensions.Logging.Abstractions*/
                 typeof(IAsyncCollector<>).Assembly.Location, /*Microsoft.Azure.WebJobs*/
                 typeof(JobHost).Assembly.Location, /*Microsoft.Azure.WebJobs.Host*/
-                typeof(CoreJobHostConfigurationExtensions).Assembly.Location, /*Microsoft.Azure.WebJobs.Extensions*/
+                typeof(WebJobs.Extensions.ExtensionsWebJobsStartup).Assembly.Location, /*Microsoft.Azure.WebJobs.Extensions*/
                 typeof(AspNetCore.Http.HttpRequest).Assembly.Location, /*Microsoft.AspNetCore.Http.Abstractions*/
                 typeof(AspNetCore.Mvc.IActionResult).Assembly.Location, /*Microsoft.AspNetCore.Mvc.Abstractions*/
                 typeof(AspNetCore.Mvc.RedirectResult).Assembly.Location, /*Microsoft.AspNetCore.Mvc.Core*/
@@ -55,7 +55,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             {
                 new DirectSharedAssemblyProvider(typeof(Newtonsoft.Json.JsonConvert).Assembly), /* Newtonsoft.Json */
                 new DirectSharedAssemblyProvider(typeof(WindowsAzure.Storage.StorageUri).Assembly), /* Microsoft.WindowsAzure.Storage */
-                new LocalSharedAssemblyProvider(@"^Microsoft\.AspNet\.WebHooks\..*"), /* Microsoft.AspNet.WebHooks.* */
             };
 
         private static readonly string[] DefaultNamespaceImports =
@@ -72,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 "Microsoft.AspNetCore.Http"
             };
 
-        public ScriptFunctionMetadataResolver(string scriptFilePath, ICollection<ScriptBindingProvider> bindingProviders, ILogger logger)
+        public ScriptFunctionMetadataResolver(string scriptFilePath, ICollection<IScriptBindingProvider> bindingProviders, ILogger logger)
         {
             _scriptFileDirectory = Path.GetDirectoryName(scriptFilePath);
             _scriptFilePath = scriptFilePath;

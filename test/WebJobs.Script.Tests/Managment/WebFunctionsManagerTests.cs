@@ -5,12 +5,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Script.WebHost;
+using Microsoft.Azure.WebJobs.Script.Description;
+using Microsoft.Azure.WebJobs.Script.Rpc;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -37,7 +40,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
                 var loggerFactory = MockNullLogerFactory.CreateLoggerFactory();
                 var contentBuilder = new StringBuilder();
                 var httpClient = CreateHttpClient(contentBuilder);
-                var webManager = new WebFunctionsManager(settings, loggerFactory, httpClient);
+                var webManager = new WebFunctionsManager(new OptionsWrapper<ScriptApplicationHostOptions>(settings), new OptionsWrapper<LanguageWorkerOptions>(CreateLanguageWorkerConfigSettings()), loggerFactory, httpClient);
 
                 FileUtility.Instance = fileSystem;
 
@@ -71,20 +74,49 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             }
         }
 
+        [Fact]
+        public static void ReadFunctionsMetadataSucceeds()
+        {
+            string functionsPath = Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sample");
+            // Setup
+            var settings = CreateWebSettings();
+            var fileSystem = CreateFileSystem(settings.ScriptPath);
+            var loggerFactory = MockNullLogerFactory.CreateLoggerFactory();
+            var contentBuilder = new StringBuilder();
+            var httpClient = CreateHttpClient(contentBuilder);
+            var webManager = new WebFunctionsManager(new OptionsWrapper<ScriptApplicationHostOptions>(settings), new OptionsWrapper<LanguageWorkerOptions>(CreateLanguageWorkerConfigSettings()), loggerFactory, httpClient);
+
+            FileUtility.Instance = fileSystem;
+            IEnumerable<FunctionMetadata> metadata = webManager.GetFunctionsMetadata();
+            var jsFunctions = metadata.Where(funcMetadata => funcMetadata.Language == LanguageWorkerConstants.NodeLanguageWorkerName).ToList();
+            var unknownFunctions = metadata.Where(funcMetadata => string.IsNullOrEmpty(funcMetadata.Language)).ToList();
+
+            Assert.Equal(2, jsFunctions.Count());
+            Assert.Equal(1, unknownFunctions.Count());
+        }
+
         private static HttpClient CreateHttpClient(StringBuilder writeContent)
         {
             return new HttpClient(new MockHttpHandler(writeContent));
         }
 
-        private static WebHostSettings CreateWebSettings()
+        private static ScriptApplicationHostOptions CreateWebSettings()
         {
-            return new WebHostSettings
+            return new ScriptApplicationHostOptions
             {
                 ScriptPath = @"x:\root",
                 IsSelfHost = false,
                 LogPath = @"x:\tmp\log",
                 SecretsPath = @"x:\secrets",
                 TestDataPath = @"x:\test"
+            };
+        }
+
+        private static LanguageWorkerOptions CreateLanguageWorkerConfigSettings()
+        {
+            return new LanguageWorkerOptions
+            {
+                WorkerConfigs = TestHelpers.GetTestWorkerConfigs()
             };
         }
 

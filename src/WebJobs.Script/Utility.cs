@@ -3,8 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Globalization;
+using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -16,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using FunctionMetadata = Microsoft.Azure.WebJobs.Script.Description.FunctionMetadata;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -27,22 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string AssemblySeparator = "__";
 
         private static readonly string UTF8ByteOrderMark = Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble());
-        public const string AzureWebsiteSku = "WEBSITE_SKU";
-        public const string DynamicSku = "Dynamic";
         private static readonly FilteredExpandoObjectConverter _filteredExpandoObjectConverter = new FilteredExpandoObjectConverter();
-
-        /// <summary>
-        /// Gets a value indicating whether the JobHost is running in a Dynamic
-        /// App Service WebApp.
-        /// </summary>
-        public static bool IsDynamic
-        {
-            get
-            {
-                string value = ScriptSettingsManager.Instance.GetSetting(AzureWebsiteSku);
-                return string.Compare(value, DynamicSku, StringComparison.OrdinalIgnoreCase) == 0;
-            }
-        }
 
         /// <summary>
         /// Delays while the specified condition remains true.
@@ -117,29 +106,6 @@ namespace Microsoft.Azure.WebJobs.Script
             return delay;
         }
 
-        /// <summary>
-        /// Computes a stable non-cryptographic hash
-        /// </summary>
-        /// <param name="value">The string to use for computation</param>
-        /// <returns>A stable, non-cryptographic, hash</returns>
-        internal static int GetStableHash(string value)
-        {
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-
-            unchecked
-            {
-                int hash = 23;
-                foreach (char c in value)
-                {
-                    hash = (hash * 31) + c;
-                }
-                return hash;
-            }
-        }
-
         public static string GetSubscriptionId(ScriptSettingsManager settingsManager)
         {
             string ownerName = settingsManager.GetSetting(EnvironmentSettingNames.AzureWebsiteOwnerName) ?? string.Empty;
@@ -186,44 +152,6 @@ namespace Microsoft.Azure.WebJobs.Script
             int i = fullFunctionName.LastIndexOf('.');
             var typeName = fullFunctionName.Substring(0, i);
             return typeName;
-        }
-
-        internal static string GetDefaultHostId(ScriptSettingsManager settingsManager, ScriptHostConfiguration scriptConfig)
-        {
-            // We're setting the default here on the newly created configuration
-            // If the user has explicitly set the HostID via host.json, it will overwrite
-            // what we set here
-            string hostId = null;
-            if (scriptConfig.IsSelfHost)
-            {
-                // When running locally, derive a stable host ID from machine name
-                // and root path. We use a hash rather than the path itself to ensure
-                // IDs differ (due to truncation) between folders that may share the same
-                // root path prefix.
-                // Note that such an ID won't work in distributed scenarios, so should
-                // only be used for local/CLI scenarios.
-                string sanitizedMachineName = Environment.MachineName
-                    .Where(char.IsLetterOrDigit)
-                    .Aggregate(new StringBuilder(), (b, c) => b.Append(c)).ToString();
-                hostId = $"{sanitizedMachineName}-{Math.Abs(GetStableHash(scriptConfig.RootScriptPath))}";
-            }
-            else if (!string.IsNullOrEmpty(settingsManager?.AzureWebsiteUniqueSlotName))
-            {
-                // If running on Azure Web App, derive the host ID from unique site slot name
-                hostId = settingsManager.AzureWebsiteUniqueSlotName;
-            }
-
-            if (!string.IsNullOrEmpty(hostId))
-            {
-                if (hostId.Length > ScriptConstants.MaximumHostIdLength)
-                {
-                    // Truncate to the max host name length if needed
-                    hostId = hostId.Substring(0, ScriptConstants.MaximumHostIdLength);
-                }
-            }
-
-            // Lowercase and trim any trailing '-' as they can cause problems with queue names
-            return hostId?.ToLowerInvariant().TrimEnd('-');
         }
 
         public static string FlattenException(Exception ex, Func<string, string> sourceFormatter = null, bool includeSource = true)
@@ -378,11 +306,6 @@ namespace Microsoft.Azure.WebJobs.Script
             return JObject.Parse(json);
         }
 
-        public static IJobHostMetadataProvider CreateMetadataProvider(this JobHost host)
-        {
-            return (IJobHostMetadataProvider)host.Services.GetService(typeof(IJobHostMetadataProvider));
-        }
-
         internal static bool IsNullable(Type type)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
@@ -476,6 +399,52 @@ namespace Microsoft.Azure.WebJobs.Script
         public static string GetAssemblyNameFromMetadata(Description.FunctionMetadata metadata, string suffix)
         {
             return AssemblyPrefix + metadata.Name + AssemblySeparator + suffix.GetHashCode().ToString();
+        }
+
+        internal static void AddFunctionError(IDictionary<string, ICollection<string>> functionErrors, string functionName, string error, bool isFunctionShortName = false)
+        {
+            functionName = isFunctionShortName ? functionName : Utility.GetFunctionShortName(functionName);
+
+            ICollection<string> functionErrorCollection = new Collection<string>();
+            if (!functionErrors.TryGetValue(functionName, out functionErrorCollection))
+            {
+                functionErrors[functionName] = functionErrorCollection = new Collection<string>();
+            }
+            functionErrorCollection.Add(error);
+        }
+
+        internal static bool TryReadFunctionConfig(string scriptDir, out string json, IFileSystem fileSystem = null)
+        {
+            json = null;
+            fileSystem = fileSystem ?? FileUtility.Instance;
+
+            // read the function config
+            string functionConfigPath = Path.Combine(scriptDir, ScriptConstants.FunctionMetadataFileName);
+            try
+            {
+                json = fileSystem.File.ReadAllText(functionConfigPath);
+            }
+            catch (IOException ex) when
+                (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            {
+                // not a function directory
+                return false;
+            }
+
+            return true;
+        }
+
+        internal static bool IsSingleLanguage(IEnumerable<FunctionMetadata> functions, string language)
+        {
+            if (string.IsNullOrEmpty(language))
+            {
+                if (functions != null && functions.Any())
+                {
+                    var functionsListWithoutProxies = functions.Where(f => f.IsProxy == false);
+                    return functionsListWithoutProxies.Select(f => f.Language).Distinct().Count() <= 1;
+                }
+            }
+            return true;
         }
 
         private class FilteredExpandoObjectConverter : ExpandoObjectConverter

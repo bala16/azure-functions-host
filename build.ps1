@@ -43,7 +43,7 @@ function CrossGen([string] $runtime, [string] $publishTarget, [string] $privateS
     dotnet publish .\src\WebJobs.Script.WebHost\WebJobs.Script.WebHost.csproj -r $runtime -o "$selfContained" -v q /p:BuildNumber=$buildNumber    
 
     # Modify web.config for inproc
-    dotnet tool install -g dotnet-xdt --version 2.1.0-rc.1
+    dotnet tool install -g dotnet-xdt --version 2.1.0 2> $null
     dotnet-xdt -s "$privateSiteExtensionPath\web.config" -t "$privateSiteExtensionPath\web.InProcess.$runtime.xdt" -o "$privateSiteExtensionPath\web.config"
 
     $successfullDlls =@()
@@ -94,6 +94,21 @@ function CrossGen([string] $runtime, [string] $publishTarget, [string] $privateS
     #read-host "Press ENTER to continue..."
     Remove-Item -Recurse -Force $selfContained -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force $publishTarget\download -ErrorAction SilentlyContinue
+}
+
+function AddDiaSymReaderToPath()
+{
+    $infoContent = dotnet --info
+    $sdkBasePath = $infoContent  |
+        Where-Object {$_ -match 'Base Path:'} |
+        ForEach-Object {
+            $_ -replace '\s+Base Path:',''
+        }
+
+    $diaSymPath = Join-Path $sdkBasePath.Trim() "Roslyn\bincore\runtimes\win\native"
+
+    Write-Host "Adding DiaSymReader location to path ($diaSymPath)" -ForegroundColor Yellow
+    $env:Path = "$diaSymPath;$env:Path"
 }
 
 function DownloadNupkg([string] $nupkgPath, [string[]]$from, [string[]]$to) {
@@ -180,7 +195,36 @@ function CreateZips([string] $runtimeSuffix) {
     Remove-Item -Recurse -Force "$privateSiteExtensionPath\runtimes\osx" -ErrorAction SilentlyContinue
 
     # Create site extension packages
-    ZipContent $publishTarget "$buildOutput\Functions.Private.$extensionVersion-alpha$runtimeSuffix.zip"
+
+    # Prepare private "no-runtime" with custom xdt
+    if ($runtimeSuffix -eq  ".no-runtime") {
+        $currentXdtPath = "$privateSiteExtensionPath\applicationHost.xdt"
+        $tempXdtDir = "$buildOutput\xdt-temp"
+        $tempPublicXdtPath = "$tempXdtDir\applicationHost-public.xdt"
+
+        # Make a temp location
+        New-Item -Itemtype directory -path $tempXdtDir -ErrorAction SilentlyContinue
+
+        # Move the current (public) xdt to the temp location
+        Move-Item $currentXdtPath $tempPublicXdtPath
+
+        # Drop in the private XDT
+        Copy-Item .\src\WebJobs.Script.WebHost\applicationHost-private.xdt $currentXdtPath
+
+        # Make the zip
+        ZipContent $publishTarget "$buildOutput\Functions.Private.$extensionVersion-alpha$runtimeSuffix.zip"
+
+        # Restore the public XDT
+        Move-Item $tempPublicXdtPath $currentXdtPath -Force
+
+        Remove-Item $tempXdtDir -Recurse
+    }
+
+    # Zip up symbols for builds with runtime embedded
+    if ($runtimeSuffix -eq  "") {
+        ZipContent "$buildOutput\publish.win-x86\Symbols" "$buildOutput\Functions.Symbols.$extensionVersion-alpha.win-x86.zip"
+        ZipContent "$buildOutput\publish.win-x64\Symbols" "$buildOutput\Functions.Symbols.$extensionVersion-alpha.win-x64.zip"
+    }
 
     #Build site extension
     Write-Host "privateSiteExtensionPath: " $privateSiteExtensionPath
@@ -215,6 +259,8 @@ $bypassPackaging = $env:APPVEYOR_PULL_REQUEST_NUMBER -and -not $env:APPVEYOR_PUL
 if ($bypassPackaging){
     Write-Host "Bypassing artifact packaging and CrossGen for pull request." -ForegroundColor Yellow
 } else {
+    AddDiaSymReaderToPath
+
     # build no-runntime extension
     BuildPackages 1
 

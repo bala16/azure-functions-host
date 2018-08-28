@@ -12,12 +12,11 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string AzureFunctionsHttpRequestAuthorizationLevelKey = "MS_AzureFunctionsAuthorizationLevel";
         public const string AzureFunctionsHttpRequestKeyNameKey = "MS_AzureFunctionsKeyId";
         public const string AzureFunctionsHttpRequestAuthorizationDisabledKey = "MS_AzureFunctionsAuthorizationDisabled";
-        public const string AzureFunctionsHttpFunctionKey = "MS_AzureFunctionsHttpFunction";
         public const string AzureFunctionsRequestIdKey = "MS_AzureFunctionsRequestID";
         public const string AzureFunctionsColdStartKey = "MS_AzureFunctionsColdStart";
         public const string AzureFunctionsHttpRequestKey = "MS_AzureFunctionsHttpRequest";
         public const string AzureProxyFunctionExecutorKey = "MS_AzureProxyFunctionExecutor";
-        public const string AzureFunctionsHostManagerKey = "MS_AzureFunctionsHostManager";
+        public const string AzureFunctionsHostKey = "MS_AzureFunctionsHost";
         public const string AzureFunctionsNestedProxyCount = "MS_AzureFunctionsNestedProxyCount";
         public const string AzureFunctionsProxyResult = "MS_AzureFunctionsProxyResult";
 
@@ -36,6 +35,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string TraceSourceHostAdmin = "HostAdmin";
         public const string TraceSourceFileWatcher = "FileWatcher";
         public const string TraceSourceHttpHandler = "HttpRequestTraceHandler";
+        public const string TraceSourceHttpThrottleMiddleware = "HttpThrottleMiddleware";
 
         public const string LoggerHttpRequest = "MS_HttpRequest";
 
@@ -49,7 +49,8 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string LogCategoryFunction = "Function";
         public const string LogCategoryWorker = "Worker";
         public const string LogCategoryMigration = "Host.Migration";
-        public const string ConsoleLoggingMode = "consoleLoggingMode";
+
+        public const string SkipHostJsonConfigurationKey = "MS_SkipHostJsonConfiguration";
 
         // Define all system parameters we inject with a prefix to avoid collisions
         // with user parameters
@@ -66,6 +67,8 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string FunctionMetadataFileName = "function.json";
         public const string ProxyMetadataFileName = "proxies.json";
         public const string ExtensionsMetadataFileName = "extensions.json";
+        public const string AppOfflineFileName = "app_offline.htm";
+        public const string ResourcePath = "Microsoft.Azure.WebJobs.Script.WebHost.Resources";
 
         public const string DefaultMasterKeyName = "master";
         public const string DefaultFunctionKeyName = "default";

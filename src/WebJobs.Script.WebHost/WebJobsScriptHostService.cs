@@ -2,54 +2,271 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Hosting;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost
 {
-    public class WebJobsScriptHostService : IHostedService, IDisposable
+    public class WebJobsScriptHostService : IHostedService, IScriptHostManager, IDisposable
     {
-        private readonly WebScriptHostManager _scriptHostManager;
-        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly IServiceProvider _rootServiceProvider;
+        private readonly IServiceScopeFactory _rootScopeFactory;
+        private readonly IOptionsMonitor<ScriptApplicationHostOptions> _applicationHostOptions;
+        private readonly IScriptWebHostEnvironment _scriptWebHostEnvironment;
         private readonly ILogger _logger;
+        private IHost _host;
+        private CancellationTokenSource _startupLoopTokenSource;
+        private int _hostStartCount;
         private bool _disposed = false;
-        private Task _hostTask;
 
-        public WebJobsScriptHostService(WebScriptHostManager scriptHostManager, ILoggerFactory loggerFactory)
+        public WebJobsScriptHostService(IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IServiceProvider rootServiceProvider,
+            IServiceScopeFactory rootScopeFactory, IScriptWebHostEnvironment scriptWebHostEnvironment, ILoggerFactory loggerFactory)
         {
-            _scriptHostManager = scriptHostManager ?? throw new ArgumentException($@"Unable to locate the {nameof(WebScriptHostManager)} service. " +
-                    $"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(WebJobsServiceCollectionExtensions.AddWebJobsScriptHost)}' " +
-                    $"inside the call to 'ConfigureServices' in the application startup code");
+            if (loggerFactory == null)
+            {
+                throw new ArgumentNullException(nameof(loggerFactory));
+            }
 
-            _cancellationTokenSource = new CancellationTokenSource();
-            _hostTask = Task.CompletedTask;
+            _rootServiceProvider = rootServiceProvider ?? throw new ArgumentNullException(nameof(rootServiceProvider));
+            _rootScopeFactory = rootScopeFactory ?? throw new ArgumentNullException(nameof(rootScopeFactory));
+            _applicationHostOptions = applicationHostOptions ?? throw new ArgumentNullException(nameof(applicationHostOptions));
+            _scriptWebHostEnvironment = scriptWebHostEnvironment ?? throw new ArgumentNullException(nameof(scriptWebHostEnvironment));
+
             _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
+
+            State = ScriptHostState.Default;
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Initializing WebScriptHostManager.");
-            _hostTask = _scriptHostManager.EnsureHostStarted(_cancellationTokenSource.Token);
+        public IServiceProvider Services => _host?.Services;
 
-            return Task.CompletedTask;
+        public ScriptHostState State { get; private set; }
+
+        public Exception LastError { get; private set; }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            _startupLoopTokenSource = new CancellationTokenSource();
+            var startupLoopToken = _startupLoopTokenSource.Token;
+            var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(startupLoopToken, cancellationToken);
+
+            try
+            {
+                await StartHostAsync(tokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("Initialization cancellation requested by runtime.");
+                    throw;
+                }
+
+                // If the exception was triggered by our loop cancellation token, just ignore as
+                // it doesn't indicate an issue.
+            }
+        }
+
+        private async Task StartHostAsync(CancellationToken cancellationToken, int attemptCount = 0, bool skipHostJsonConfiguration = false)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                bool isOffline = CheckAppOffline();
+
+                _host = BuildHost(isOffline, skipHostJsonConfiguration);
+
+                LogInitialization(_host, isOffline, attemptCount, _hostStartCount++);
+
+                await _host.StartAsync(cancellationToken);
+
+                // This means we had an error on a previous load, so we want to keep the LastError around
+                if (!skipHostJsonConfiguration)
+                {
+                    LastError = null;
+                }
+
+                if (!isOffline && !skipHostJsonConfiguration)
+                {
+                    State = ScriptHostState.Running;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exc)
+            {
+                LastError = exc;
+                State = ScriptHostState.Error;
+                attemptCount++;
+
+                ILogger logger = GetHostLogger(_host);
+
+                logger.LogError(exc, "A ScriptHost error has occurred");
+
+                var orphanTask = Orphan(_host, logger)
+                    .ContinueWith(t =>
+                           {
+                               if (t.IsFaulted)
+                               {
+                                   t.Exception.Handle(e => true);
+                               }
+                           }, TaskContinuationOptions.ExecuteSynchronously);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (exc is HostConfigurationException)
+                {
+                    // Try starting the host without parsing host.json. This will start up a
+                    // minimal host and allow the portal to see the error. Any modification will restart again.
+                    Task ignore = StartHostAsync(cancellationToken, attemptCount, skipHostJsonConfiguration: true);
+                }
+                else
+                {
+                    await Utility.DelayWithBackoffAsync(attemptCount, cancellationToken, min: TimeSpan.FromSeconds(1), max: TimeSpan.FromMinutes(2))
+                        .ContinueWith(t =>
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            return StartHostAsync(cancellationToken, attemptCount);
+                        });
+                }
+            }
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _cancellationTokenSource.Cancel();
+            _startupLoopTokenSource?.Cancel();
 
-            Task result = await Task.WhenAny(_hostTask, Task.Delay(TimeSpan.FromSeconds(10)));
+            State = ScriptHostState.Stopping;
+            _logger.LogInformation("Stopping host...");
 
-            if (result != _hostTask)
+            var currentHost = _host;
+            Task stopTask = Orphan(currentHost, _logger, cancellationToken);
+            Task result = await Task.WhenAny(stopTask, Task.Delay(TimeSpan.FromSeconds(10)));
+
+            if (result != stopTask)
             {
-                _logger.LogWarning("Script host manager did not shutdown within its allotted time.");
+                _logger.LogWarning("Host did not shutdown within its allotted time.");
             }
             else
             {
-                _logger.LogInformation("Script host manager shutdown completed.");
+                _logger.LogInformation("Host shutdown completed.");
+            }
+
+            State = ScriptHostState.Stopped;
+        }
+
+        public async Task RestartHostAsync(CancellationToken cancellationToken)
+        {
+            if (State == ScriptHostState.Stopping || State == ScriptHostState.Stopped)
+            {
+                return;
+            }
+
+            _startupLoopTokenSource?.Cancel();
+
+            State = ScriptHostState.Default;
+
+            _logger.LogInformation("Restarting script host.");
+
+            var previousHost = _host;
+            Task startTask = StartAsync(cancellationToken);
+            Task stopTask = Orphan(previousHost, _logger, cancellationToken);
+
+            await startTask;
+
+            _logger.LogInformation("Script host restarted.");
+        }
+
+        private IHost BuildHost(bool isOffline = false, bool skipHostJsonConfiguration = false)
+        {
+            var builder = new HostBuilder();
+
+            if (skipHostJsonConfiguration)
+            {
+                builder.ConfigureAppConfiguration((context, _) =>
+                {
+                    context.Properties[ScriptConstants.SkipHostJsonConfigurationKey] = true;
+                });
+            }
+
+            builder.SetAzureFunctionsEnvironment()
+                .AddWebScriptHost(_rootServiceProvider, _rootScopeFactory, _applicationHostOptions.CurrentValue);
+
+            if (isOffline)
+            {
+                builder.ConfigureServices(services =>
+                {
+                    // When offline, we need most general services registered so admin
+                    // APIs can function. However, we want to prevent the ScriptHost from
+                    // actually starting up. To accomplish this, we remove the host service
+                    // responsible for starting the job hst.
+                    var jobHostService = services.FirstOrDefault(p => p.ImplementationType == typeof(JobHostService));
+                    services.Remove(jobHostService);
+                });
+            }
+
+            return builder.Build();
+        }
+
+        private ILogger GetHostLogger(IHost host)
+        {
+            var hostLoggerFactory = _host?.Services.GetService<ILoggerFactory>();
+
+            // Attempt to get the host loger with JobHost configuration applied
+            // using the default logger as a fallback
+            return hostLoggerFactory?.CreateLogger(LogCategories.Startup) ?? _logger;
+        }
+
+        private void LogInitialization(IHost host, bool isOffline, int attemptCount, int v)
+        {
+            var logger = GetHostLogger(host);
+
+            var log = isOffline ? "Host is offline." : "Initializing Host.";
+            logger.LogInformation(log);
+            logger.LogInformation($"Host initialization: ConsecutiveErrors={attemptCount}, StartupCount={_hostStartCount++}");
+        }
+
+        private bool CheckAppOffline()
+        {
+            // check if we should be in an offline state
+            string offlineFilePath = Path.Combine(_applicationHostOptions.CurrentValue.ScriptPath, ScriptConstants.AppOfflineFileName);
+            if (File.Exists(offlineFilePath))
+            {
+                State = ScriptHostState.Offline;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Remove the <see cref="IHost"/> instance from the live instances collection,
+        /// allowing it to finish currently executing functions before stopping and disposing of it.
+        /// </summary>
+        /// <param name="instance">The <see cref="IHost"/> instance to remove</param>
+        private async Task Orphan(IHost instance, ILogger logger, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await (instance?.StopAsync(cancellationToken) ?? Task.CompletedTask);
+            }
+            catch (Exception)
+            {
+                //  logger.LogTrace(exc, "Error stopping and disposing of host");
+            }
+            finally
+            {
+                instance?.Dispose();
             }
         }
 
@@ -59,7 +276,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             {
                 if (disposing)
                 {
-                    _cancellationTokenSource.Dispose();
+                    _startupLoopTokenSource?.Dispose();
                 }
                 _disposed = true;
             }

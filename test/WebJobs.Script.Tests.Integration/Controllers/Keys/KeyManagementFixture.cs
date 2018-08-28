@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net.Http;
-using Autofac;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
@@ -30,17 +29,20 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Controllers
 
         protected override void ConfigureWebHostBuilder(IWebHostBuilder webHostBuilder)
         {
-            TestFunctionKeys = new Dictionary<string, string>
-            {
-                { "key1", "1234" },
-                { "key2", "1234" }
-            };
-
-            SecretManagerMock = BuildSecretManager();
-
-            webHostBuilder.ConfigureServices(c => c.AddSingleton<ISecretManager>(SecretManagerMock.Object));
-
             base.ConfigureWebHostBuilder(webHostBuilder);
+
+            webHostBuilder.ConfigureServices(s =>
+            {
+                TestFunctionKeys = new Dictionary<string, string>
+                {
+                    { "key1", "1234" },
+                    { "key2", "1234" }
+                };
+
+                SecretManagerMock = BuildSecretManager();
+
+                s.AddSingleton<ISecretManagerProvider>(new TestSecretManagerProvider(SecretManagerMock.Object));
+            });
         }
 
         public static ApiModel ReadApiModelContent(HttpResponseMessage response)

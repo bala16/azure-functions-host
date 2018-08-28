@@ -192,7 +192,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             string result = await TestHelpers.WaitForBlobAndGetStringAsync(resultBlob);
             Assert.Equal(TestHelpers.RemoveByteOrderMarkAndWhitespace(messageContent), TestHelpers.RemoveByteOrderMarkAndWhitespace(result));
 
-            LogMessage traceEvent = await WaitForTraceAsync(p => p?.FormattedMessage != null && p.FormattedMessage.Contains(id));
+            string userCategory = LogCategories.CreateFunctionUserCategory("QueueTriggerToBlob");
+            LogMessage traceEvent = await WaitForTraceAsync(p => p?.FormattedMessage != null && p.FormattedMessage.Contains(id) && string.Equals(p.Category, userCategory, StringComparison.Ordinal));
             Assert.Equal(LogLevel.Information, traceEvent.Level);
 
             string trace = traceEvent.FormattedMessage;
@@ -340,8 +341,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             // We know the tests are using the default INameResolver and the default setting.
             var connectionString = _nameResolver.Resolve("AzureWebJobsCosmosDBConnectionString");
-            var builder = new DbConnectionStringBuilder();
-            builder.ConnectionString = connectionString;
+            var builder = new DbConnectionStringBuilder
+            {
+                ConnectionString = connectionString
+            };
             var serviceUri = new Uri(builder["AccountEndpoint"].ToString());
             var client = new DocumentClient(serviceUri, builder["AccountKey"].ToString());
 

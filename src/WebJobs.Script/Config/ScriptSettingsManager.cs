@@ -31,28 +31,11 @@ namespace Microsoft.Azure.WebJobs.Script.Config
         /// </summary>
         public virtual bool IsAppServiceEnvironment => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteInstanceId));
 
-        /// <summary>
-        /// Gets a value indicating whether we are running in a Linux container
-        /// </summary>
-        public virtual bool IsLinuxContainerEnvironment
-        {
-            get
-            {
-                return !IsAppServiceEnvironment && !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.ContainerName));
-            }
-        }
-
-        public bool IsRemoteDebuggingEnabled => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.RemoteDebuggingPort));
-
-        public virtual bool IsZipDeployment => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteZipDeployment));
-
         public virtual bool ContainerReady => !string.IsNullOrEmpty(GetSetting(EnvironmentSettingNames.AzureWebsiteContainerReady));
 
         public string WebsiteSku => GetSetting(EnvironmentSettingNames.AzureWebsiteSku);
 
         public bool IsDynamicSku => WebsiteSku == ScriptConstants.DynamicSku;
-
-        public virtual bool FileSystemIsReadOnly => IsZipDeployment;
 
         public virtual string AzureWebsiteDefaultSubdomain
         {
@@ -73,6 +56,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
         /// <summary>
         /// Gets a value that uniquely identifies the site and slot.
         /// </summary>
+        // TODO: DI (FACAVAL) Remove all usage here. Moved to EnvironmentUtility
         public virtual string AzureWebsiteUniqueSlotName
         {
             get
@@ -90,7 +74,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
             }
         }
 
-        public virtual string InstanceId
+        public virtual string AzureWebsiteInstanceId
          {
              get
              {

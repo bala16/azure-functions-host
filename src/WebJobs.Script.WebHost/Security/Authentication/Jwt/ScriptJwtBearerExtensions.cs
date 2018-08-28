@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Web.DataProtection;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.WebJobs.Script;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication;
@@ -31,7 +32,8 @@ namespace Microsoft.Extensions.DependencyInjection
                                 OnMessageReceived = c =>
                                 {
                                     // Temporary: Tactical fix to address specialization issues. This should likely be moved to a token validator
-                                    if (_specialized == 0 && !WebScriptHostManager.InStandbyMode && Interlocked.CompareExchange(ref _specialized, 1, 0) == 0)
+                                    // TODO: DI (FACAVAL) This will be fixed once the permanent fix is in plance
+                                    if (_specialized == 0 && !SystemEnvironment.Instance.IsPlaceholderModeEnabled() && Interlocked.CompareExchange(ref _specialized, 1, 0) == 0)
                                     {
                                         o.TokenValidationParameters = CreateTokenValidationParameters();
                                     }
@@ -53,7 +55,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
                             o.TokenValidationParameters = CreateTokenValidationParameters();
 
-                            if (!WebScriptHostManager.InStandbyMode)
+                            // TODO: DI (FACAVAL) Remove this once th work above is completed.
+                            if (!SystemEnvironment.Instance.IsPlaceholderModeEnabled())
                             {
                                 // We're not in standby mode, so flag as specialized
                                 _specialized = 1;

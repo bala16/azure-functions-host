@@ -31,11 +31,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             _next = next;
         }
 
-        public async Task Invoke(HttpContext context, WebScriptHostManager manager)
+        public async Task Invoke(HttpContext context)
         {
-            // flow required context through the request pipeline
-            // downstream middleware and filters rely on this
-            context.Items[ScriptConstants.AzureFunctionsHostManagerKey] = manager;
+            // TODO: DI Need to make sure downstream services are getting what they need
+            // that includes proxies.
+            //if (scriptHost != null)
+            //{
+            //    // flow required context through the request pipeline
+            //    // downstream middleware and filters rely on this
+            //    context.Items[ScriptConstants.AzureFunctionsHostKey] = scriptHost;
+            //}
             SetRequestId(context.Request);
 
             if (_next != null)
@@ -44,7 +49,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             }
 
             IFunctionExecutionFeature functionExecution = context.Features.Get<IFunctionExecutionFeature>();
-            if (functionExecution != null && !context.Response.HasStarted)
+            if (functionExecution != null && !context.Response.HasStarted())
             {
                 int nestedProxiesCount = GetNestedProxiesCount(context, functionExecution);
                 IActionResult result = await GetResultAsync(context, functionExecution);

@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO.Abstractions;
 using System.IO.Compression;
 using System.Linq;
@@ -21,6 +20,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
@@ -32,15 +32,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
     public class FunctionsController : Controller
     {
         private readonly IWebFunctionsManager _functionsManager;
-        private readonly ScriptHostManager _scriptHostManager;
         private readonly IWebJobsRouter _webJobsRouter;
         private readonly ILogger _logger;
         private static readonly Regex FunctionNameValidationRegex = new Regex(@"^[a-z][a-z0-9_\-]{0,127}$(?<!^host$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        public FunctionsController(IWebFunctionsManager functionsManager, WebScriptHostManager scriptHostManager, IWebJobsRouter webJobsRouter, ILoggerFactory loggerFactory)
+        public FunctionsController(IWebFunctionsManager functionsManager, IWebJobsRouter webJobsRouter, ILoggerFactory loggerFactory)
         {
             _functionsManager = functionsManager;
-            _scriptHostManager = scriptHostManager;
             _webJobsRouter = webJobsRouter;
             _logger = loggerFactory?.CreateLogger(ScriptConstants.LogCategoryFunctionsController);
         }
@@ -96,14 +94,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/functions/{name}")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         [RequiresRunningHost]
-        public IActionResult Invoke(string name, [FromBody] FunctionInvocation invocation)
+        public IActionResult Invoke(string name, [FromBody] FunctionInvocation invocation, [FromServices] IScriptJobHost scriptHost)
         {
             if (invocation == null)
             {
                 return BadRequest();
             }
 
-            FunctionDescriptor function = _scriptHostManager.Instance.GetFunctionOrNull(name);
+            FunctionDescriptor function = scriptHost.GetFunctionOrNull(name);
             if (function == null)
             {
                 return NotFound();
@@ -114,7 +112,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             {
                 { inputParameter.Name, invocation.Input }
             };
-            Task.Run(() => _scriptHostManager.Instance.CallAsync(function.Name, arguments));
+            Task.Run(() => scriptHost.CallAsync(function.Name, arguments));
 
             return Accepted();
         }
@@ -123,13 +121,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/functions/{name}/status")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         [RequiresRunningHost]
-        public IActionResult GetFunctionStatus(string name)
+        public IActionResult GetFunctionStatus(string name, [FromServices] IScriptJobHost scriptHost)
         {
             FunctionStatus status = new FunctionStatus();
-            Collection<string> functionErrors = null;
 
             // first see if the function has any errors
-            if (_scriptHostManager.Instance.FunctionErrors.TryGetValue(name, out functionErrors))
+            if (scriptHost.FunctionErrors.TryGetValue(name, out ICollection<string> functionErrors))
             {
                 status.Errors = functionErrors;
             }
@@ -137,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             {
                 // if we don't have any errors registered, make sure the function exists
                 // before returning empty errors
-                FunctionDescriptor function = _scriptHostManager.Instance.Functions.FirstOrDefault(p => p.Name.ToLowerInvariant() == name.ToLowerInvariant());
+                FunctionDescriptor function = scriptHost.Functions.FirstOrDefault(p => p.Name.ToLowerInvariant() == name.ToLowerInvariant());
                 if (function == null)
                 {
                     return NotFound();
@@ -173,9 +170,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [HttpGet]
         [Route("admin/functions/download")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        public IActionResult Download()
+        public IActionResult Download([FromServices] IOptions<ScriptApplicationHostOptions> webHostOptions)
         {
-            var path = _scriptHostManager.Instance.ScriptConfig.RootScriptPath;
+            var path = webHostOptions.Value.ScriptPath;
             var dirInfo = FileUtility.DirectoryInfoFromDirectoryName(path);
             return new FileCallbackResult(new MediaTypeHeaderValue("application/octet-stream"), async (outputStream, _) =>
             {

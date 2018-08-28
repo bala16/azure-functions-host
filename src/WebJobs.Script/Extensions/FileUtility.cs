@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,6 +20,15 @@ namespace Microsoft.Azure.WebJobs.Script
         {
             get { return _instance ?? _default; }
             set { _instance = value; }
+        }
+
+        public static string ReadResourceString(string resourcePath)
+        {
+            Assembly assembly = Assembly.GetCallingAssembly();
+            using (StreamReader reader = new StreamReader(assembly.GetManifestResourceStream(resourcePath)))
+            {
+                return reader.ReadToEnd();
+            }
         }
 
         public static void EnsureDirectoryExists(string path)
@@ -150,6 +160,11 @@ namespace Microsoft.Azure.WebJobs.Script
 
         public static void CopyDirectory(string sourcePath, string targetPath)
         {
+            if (!Directory.Exists(targetPath))
+            {
+                Directory.CreateDirectory(targetPath);
+            }
+
             foreach (string dirPath in Instance.Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
             {
                 Instance.Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));

@@ -10,6 +10,7 @@ using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Script.Binding;
+using Microsoft.Azure.WebJobs.Script.Rpc;
 using Microsoft.WebJobs.Script.Tests;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -26,6 +27,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             Fixture = fixture;
         }
+
         [Theory]
         [InlineData("httptrigger")]
         [InlineData("httptriggershared")]
@@ -44,7 +46,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     ["user-agent"] = userAgent,
                     ["accept"] = accept,
                     ["custom-1"] = customHeader
-
                 });
 
             Dictionary<string, object> arguments = new Dictionary<string, object>
@@ -86,7 +87,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             Assert.Equal(HttpUtility.UrlDecode(url), (string)resultObject["reqOriginalUrl"]);
         }
 
-
         [Theory]
         [InlineData("application/octet-stream")]
         [InlineData("multipart/form-data; boundary=----WebKitFormBoundaryTYtz7wze2XXrH26B")]
@@ -99,7 +99,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             byte[] inputBytes = new byte[] { 1, 2, 3, 4, 5 };
             var content = inputBytes;
-
 
             HttpRequest request = HttpTestHelpers.CreateHttpRequest("POST", "http://localhost/api/httptriggerbytearray", headers, content);
 
@@ -166,6 +165,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 throw t.Exception;
             }
         }
+
         [Fact]
         public async Task PromiseApi_Rejects()
         {
@@ -208,21 +208,24 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             Assert.Same(t, result);
             Assert.True(logs.Any(l => l.Contains("FunctionName:Scenarios")));
-            Assert.True(logs.Any(l => l.Contains($"FunctionDirectory:{Path.Combine(Fixture.Host.ScriptConfig.RootScriptPath, "Scenarios")}")));
+            Assert.True(logs.Any(l => l.Contains($"FunctionDirectory:{Path.Combine(Fixture.Host.ScriptOptions.RootScriptPath, "Scenarios")}")));
         }
 
         public class TestFixture : ScriptHostEndToEndTestFixture
         {
-            public TestFixture() : base(@"TestScripts\Node", "node")
+            static TestFixture()
             {
             }
 
-            internal TestFixture(bool startHost) : base(@"TestScripts\Node", "node", null, startHost)
+            public TestFixture() : base(@"TestScripts\Node", "node", LanguageWorkerConstants.NodeLanguageWorkerName,
+                startHost: true, functions: new[] { "HttpTrigger", "Scenarios", "HttpTriggerByteArray" })
             {
             }
-            internal TestFixture(ICollection<string> functions, string functionsWorkerLanguage = null) 
-                : base(@"TestScripts\Node", "node", null, true, functions, functionsWorkerLanguage)
+
+            protected override Task CreateTestStorageEntities()
             {
+                // No need for this.
+                return Task.CompletedTask;
             }
         }
     }

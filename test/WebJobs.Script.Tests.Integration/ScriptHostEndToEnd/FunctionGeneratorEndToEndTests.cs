@@ -9,6 +9,8 @@ using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Description;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -23,6 +25,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             // construct our TimerTrigger attribute ([TimerTrigger("00:00:02", RunOnStartup = true)])
             Collection<ParameterDescriptor> parameters = new Collection<ParameterDescriptor>();
+
             ParameterDescriptor parameter = new ParameterDescriptor("timerInfo", typeof(TimerInfo));
             ConstructorInfo ctorInfo = typeof(TimerTriggerAttribute).GetConstructor(new Type[] { typeof(string) });
             PropertyInfo runOnStartupProperty = typeof(TimerTriggerAttribute).GetProperty("RunOnStartup");
@@ -42,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             functions.Add(function);
 
             // Get the Type Attributes (in this case, a TimeoutAttribute)
-            ScriptHostConfiguration scriptConfig = new ScriptHostConfiguration();
+            ScriptJobHostOptions scriptConfig = new ScriptJobHostOptions();
             scriptConfig.FunctionTimeout = TimeSpan.FromMinutes(5);
             Collection<CustomAttributeBuilder> typeAttributes = new Collection<CustomAttributeBuilder>();
 
@@ -56,17 +59,27 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             Assert.NotNull(triggerAttribute);
 
             // start the JobHost which will start running the timer function
-            JobHostConfiguration config = new JobHostConfiguration()
-            {
-                TypeLocator = new TypeLocator(functionType),
-                LoggerFactory = new LoggerFactory()
-            };
-            config.UseTimers();
-            JobHost host = new JobHost(config);
+            var builder = new HostBuilder()
+                .ConfigureWebJobs(b =>
+                {
+                    b.AddTimers()
+                    .AddAzureStorageCoreServices();
+                })
+                .ConfigureServices(s =>
+                {
+                    s.AddSingleton<ITypeLocator>(new TestTypeLocator(functionType));
+                    s.AddSingleton<ILoggerFactory>(new LoggerFactory());
+                });
 
-            await host.StartAsync();
-            await Task.Delay(3000);
-            await host.StopAsync();
+
+            using (var host = builder.Build())
+            {
+
+
+                await host.StartAsync();
+                await Task.Delay(3000);
+                await host.StopAsync();
+            }
 
             // verify our custom invoker was called
             Assert.True(invoker.InvokeCount >= 2);

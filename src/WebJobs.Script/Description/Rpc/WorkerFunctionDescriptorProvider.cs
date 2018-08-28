@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
@@ -9,18 +10,23 @@ using System.Reflection.Emit;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Azure.WebJobs.Description;
 using Microsoft.Azure.WebJobs.Script.Binding;
+using Microsoft.Azure.WebJobs.Script.Extensibility;
 using Microsoft.Azure.WebJobs.Script.Rpc;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
     internal class WorkerFunctionDescriptorProvider : FunctionDescriptorProvider
     {
-        private IFunctionRegistry _dispatcher;
+        private readonly ILoggerFactory _loggerFactory;
+        private IFunctionDispatcher _dispatcher;
 
-        public WorkerFunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config, IFunctionRegistry dispatcher)
-            : base(host, config)
+        public WorkerFunctionDescriptorProvider(ScriptHost host, ScriptJobHostOptions config, ICollection<IScriptBindingProvider> bindingProviders,
+            IFunctionDispatcher dispatcher, ILoggerFactory loggerFactory)
+            : base(host, config, bindingProviders)
         {
             _dispatcher = dispatcher;
+            _loggerFactory = loggerFactory;
         }
 
         public override bool TryCreate(FunctionMetadata functionMetadata, out FunctionDescriptor functionDescriptor)
@@ -42,7 +48,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 Metadata = functionMetadata,
                 InputBuffer = inputBuffer
             });
-            return new WorkerLanguageInvoker(Host, triggerMetadata, functionMetadata, inputBindings, outputBindings, inputBuffer);
+            return new WorkerLanguageInvoker(Host, triggerMetadata, functionMetadata, _loggerFactory, inputBindings, outputBindings, inputBuffer);
         }
 
         protected override Collection<ParameterDescriptor> GetFunctionParameters(IFunctionInvoker functionInvoker, FunctionMetadata functionMetadata,

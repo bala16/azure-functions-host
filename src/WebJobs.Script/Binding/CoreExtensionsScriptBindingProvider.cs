@@ -4,9 +4,9 @@ using System;
 using System.Collections.ObjectModel;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Extensibility;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NCrontab;
-using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Script.Binding
 {
@@ -15,18 +15,14 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
     /// </summary>
     internal class CoreExtensionsScriptBindingProvider : ScriptBindingProvider
     {
-        public CoreExtensionsScriptBindingProvider(JobHostConfiguration config, JObject hostMetadata, ILogger logger)
-            : base(config, hostMetadata, logger)
-        {
-        }
+        private readonly INameResolver _nameResolver;
+        private readonly IEnvironment _environment;
 
-        public string AppDirectory { get; set; }
-
-        /// <inheritdoc/>
-        public override void Initialize()
+        public CoreExtensionsScriptBindingProvider(INameResolver nameResolver, IEnvironment environment, ILogger<CoreExtensionsScriptBindingProvider> logger)
+            : base(logger)
         {
-            Config.UseTimers();
-            Config.UseCore(AppDirectory);
+            _nameResolver = nameResolver ?? throw new ArgumentNullException(nameof(nameResolver));
+            _environment = environment ?? throw new ArgumentNullException(nameof(environment));
         }
 
         /// <inheritdoc/>
@@ -34,14 +30,14 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
         {
             if (context == null)
             {
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
             }
 
             binding = null;
 
-            if (string.Compare(context.Type, "timerTrigger", StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(context.Type, "timerTrigger", StringComparison.OrdinalIgnoreCase))
             {
-                binding = new TimerTriggerScriptBinding(context);
+                binding = new TimerTriggerScriptBinding(_nameResolver, _environment, context);
             }
 
             return binding != null;
@@ -49,17 +45,16 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
 
         internal class TimerTriggerScriptBinding : ScriptBinding
         {
-            public TimerTriggerScriptBinding(ScriptBindingContext context) : base(context)
+            private readonly INameResolver _nameResolver;
+            private readonly IEnvironment _environment;
+
+            public TimerTriggerScriptBinding(INameResolver nameResolver, IEnvironment environment, ScriptBindingContext context) : base(context)
             {
+                _nameResolver = nameResolver ?? throw new ArgumentNullException(nameof(nameResolver));
+                _environment = environment ?? throw new ArgumentNullException(nameof(environment));
             }
 
-            public override Type DefaultType
-            {
-                get
-                {
-                    return typeof(TimerInfo);
-                }
-            }
+            public override Type DefaultType => typeof(TimerInfo);
 
             public override Collection<Attribute> GetAttributes()
             {
@@ -68,12 +63,10 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
                 string schedule = Context.GetMetadataValue<string>("schedule");
                 bool runOnStartup = Context.GetMetadataValue<bool>("runOnStartup");
                 bool useMonitor = Context.GetMetadataValue<bool>("useMonitor", true);
-
-                if (Utility.IsDynamic)
+                if (_environment.IsDynamic())
                 {
                     // pre-resolve app setting specifiers
-                    var resolver = new DefaultNameResolver();
-                    schedule = resolver.ResolveWholeString(schedule);
+                    schedule = _nameResolver.ResolveWholeString(schedule);
 
                     var options = new CrontabSchedule.ParseOptions()
                     {

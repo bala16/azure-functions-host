@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.WebHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -227,7 +228,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             public Fixture()
             {
                 TestSiteName = "TestSiteName";
-                BlobConnectionString = AmbientConnectionStringProvider.Instance.GetConnectionString(ConnectionStringNames.Storage);
+                var configuration = TestHelpers.GetTestConfiguration();
+                BlobConnectionString = configuration.GetWebJobsConnectionString(ConnectionStringNames.Storage);
                 BlobContainer = CloudStorageAccount.Parse(BlobConnectionString).CreateCloudBlobClient().GetContainerReference("azure-webjobs-secrets");
             }
 

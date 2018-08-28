@@ -13,7 +13,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Azure.WebJobs.Script.Rpc;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.WebJobs.Script.Tests;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -132,7 +135,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
             await TableOutputTest();
         }
 
-
         [Fact(Skip = "Not yet enabled.")]
         public void NotificationHub()
         {
@@ -180,22 +182,23 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
 
             await Fixture.Host.BeginFunctionAsync("Scenarios", input);
 
+            string userCategory = LogCategories.CreateFunctionUserCategory("Scenarios");
             IList<string> logs = null;
             await TestHelpers.Await(() =>
             {
-                logs = Fixture.Host.GetLogMessages(LogCategories.CreateFunctionUserCategory("Scenarios")).Select(p => p.FormattedMessage).ToList();
+                logs = Fixture.Host.GetLogMessages(userCategory).Select(p => p.FormattedMessage).ToList();
                 return logs.Count == 10;
-            });
+            }, userMessageCallback: Fixture.Host.GetLog);
 
             // verify use of context.log to log complex objects
-            LogMessage scriptTrace = Fixture.Host.GetLogMessages().Single(p => p.FormattedMessage != null && p.FormattedMessage.Contains(testData));
+            LogMessage scriptTrace = Fixture.Host.GetLogMessages(userCategory).Single(p => p.FormattedMessage != null && p.FormattedMessage.Contains(testData));
             Assert.Equal(LogLevel.Information, scriptTrace.Level);
             JObject logEntry = JObject.Parse(scriptTrace.FormattedMessage);
             Assert.Equal("This is a test", logEntry["message"]);
             Assert.Equal(testData, logEntry["input"]);
 
             // verify log levels in traces
-            LogMessage[] traces = Fixture.Host.GetLogMessages().Where(t => t.FormattedMessage != null && t.FormattedMessage.Contains("loglevel")).ToArray();
+            LogMessage[] traces = Fixture.Host.GetLogMessages(userCategory).Where(t => t.FormattedMessage != null && t.FormattedMessage.Contains("loglevel")).ToArray();
             Assert.Equal(LogLevel.Information, traces[0].Level);
             Assert.Equal("loglevel default", traces[0].FormattedMessage);
             Assert.Equal(LogLevel.Information, traces[1].Level);
@@ -727,61 +730,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
             // Assert.Equal(rawBody, (string)resultObject["reqRawBody"]);
         }
 
-        [Fact(Skip = "unsupported")]
-        public void WebHookTrigger_GenericJson()
-        {
-            //string testData = Guid.NewGuid().ToString();
-            //JObject testObject = new JObject
-            //{
-            //    { "a", testData }
-            //};
-            //HttpRequestMessage request = new HttpRequestMessage
-            //{
-            //    RequestUri = new Uri(string.Format("http://localhost/api/webhooktrigger?code=1388a6b0d05eca2237f10e4a4641260b0a08f3a5")),
-            //    Method = HttpMethod.Post,
-            //    Content = new StringContent(testObject.ToString())
-            //};
-            //request.SetConfiguration(Fixture.RequestConfiguration);
-            //request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-            //request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-            //Dictionary<string, object> arguments = new Dictionary<string, object>
-            //{
-            //    { "payload", request }
-            //};
-            //await Fixture.Host.CallAsync("WebHookTrigger", arguments);
-
-            //HttpResponseMessage response = (HttpResponseMessage)request.Properties[ScriptConstants.AzureFunctionsHttpResponseKey];
-            //Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            //string body = await response.Content.ReadAsStringAsync();
-            //Assert.Equal(string.Format("WebHook processed successfully! {0}", testData), body);
-        }
-
-        [Fact(Skip = "unsupported")]
-        public void WebHookTrigger_NoContent()
-        {
-            //HttpRequestMessage request = new HttpRequestMessage
-            //{
-            //    RequestUri = new Uri(string.Format("http://localhost/api/webhooktrigger?code=1388a6b0d05eca2237f10e4a4641260b0a08f3a5")),
-            //    Method = HttpMethod.Post,
-            //};
-            //request.SetConfiguration(Fixture.RequestConfiguration);
-            //request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-
-            //Dictionary<string, object> arguments = new Dictionary<string, object>
-            //{
-            //    { "payload", request }
-            //};
-            //await Fixture.Host.CallAsync("WebHookTrigger", arguments);
-
-            //HttpResponseMessage response = (HttpResponseMessage)request.Properties[ScriptConstants.AzureFunctionsHttpResponseKey];
-            //Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            //string body = await response.Content.ReadAsStringAsync();
-            //Assert.Equal(string.Format("No content"), body);
-        }
-
         [Fact(Skip = "Needs investigation")]
         public async Task HttpTrigger_Scenarios_Buffer()
         {
@@ -923,8 +871,39 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
 #endif
         public class TestFixture : EndToEndTestFixture
         {
-            public TestFixture() : base(@"TestScripts\Node", "node")
+            public TestFixture() : base(@"TestScripts\Node", "node", LanguageWorkerConstants.NodeLanguageWorkerName)
             {
+            }
+
+            public override void ConfigureJobHost(IWebJobsBuilder webJobsBuilder)
+            {
+                base.ConfigureJobHost(webJobsBuilder);
+
+                webJobsBuilder.AddAzureStorage()
+                    .Services.Configure<ScriptJobHostOptions>(o =>
+                    {
+                        o.Functions = new[]
+                        {
+                            "BlobTriggerToBlob",
+                            "HttpTrigger",
+                            "HttpTrigger-Scenarios",
+                            "HttpTriggerExpressApi",
+                            "HttpTriggerPromise",
+                            "HttpTriggerToBlob",
+                            "Invalid",
+                            "ManualTrigger",
+                            "MultipleExports",
+                            "MultipleOutputs",
+                            "MultipleInputs",
+                            "QueueTriggerByteArray",
+                            "QueueTriggerToBlob",
+                            "SingleNamedExport",
+                            "TableIn",
+                            "TableOut",
+                            "TimerTrigger",
+                            "Scenarios"
+                        };
+                    });
             }
         }
 

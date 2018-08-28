@@ -14,8 +14,10 @@ Publish
 msbuild.log
 package-lock.json
 **/Properties/launchSettings.json
+**/project.assets.json
 
 /packages
+tools/ExtensionsMetadataGenerator/packages
 /TestResults
 
 /tools/NuGet.exe

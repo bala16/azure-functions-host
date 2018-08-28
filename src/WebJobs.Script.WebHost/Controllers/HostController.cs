@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,13 +13,16 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Script.WebHost.Authentication;
 using Microsoft.Azure.WebJobs.Script.WebHost.Filters;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using HttpHandler = Microsoft.Azure.WebJobs.IAsyncConverter<System.Net.Http.HttpRequestMessage, System.Net.Http.HttpResponseMessage>;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -28,36 +32,46 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
     /// </summary>
     public class HostController : Controller
     {
-        private readonly WebScriptHostManager _scriptHostManager;
-        private readonly WebHostSettings _webHostSettings;
+        private readonly IOptions<ScriptApplicationHostOptions> _applicationHostOptions;
+        private readonly IOptions<JobHostOptions> _hostOptions;
         private readonly ILogger _logger;
         private readonly IAuthorizationService _authorizationService;
         private readonly IWebFunctionsManager _functionsManager;
+        private readonly IEnvironment _environment;
+        private readonly IScriptHostManager _scriptHostManager;
 
-        public HostController(WebScriptHostManager scriptHostManager, WebHostSettings webHostSettings, ILoggerFactory loggerFactory, IAuthorizationService authorizationService, IWebFunctionsManager functionsManager)
+        public HostController(IOptions<ScriptApplicationHostOptions> applicationHostOptions,
+            IOptions<JobHostOptions> hostOptions,
+            ILoggerFactory loggerFactory,
+            IAuthorizationService authorizationService,
+            IWebFunctionsManager functionsManager,
+            IEnvironment environment,
+            IScriptHostManager scriptHostManager)
         {
-            _scriptHostManager = scriptHostManager;
-            _webHostSettings = webHostSettings;
+            _applicationHostOptions = applicationHostOptions;
+            _hostOptions = hostOptions;
             _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostController);
             _authorizationService = authorizationService;
             _functionsManager = functionsManager;
+            _environment = environment;
+            _scriptHostManager = scriptHostManager;
         }
 
         [HttpGet]
         [Route("admin/host/status")]
         [Authorize(Policy = PolicyNames.AdminAuthLevelOrInternal)]
-        [EnableDebugMode]
-        public IActionResult GetHostStatus()
+        [TypeFilter(typeof(EnableDebugModeFilter))]
+        public async Task<IActionResult> GetHostStatus([FromServices] IScriptHostManager scriptHostManager, [FromServices] IHostIdProvider hostIdProvider)
         {
             var status = new HostStatus
             {
-                State = _scriptHostManager.State.ToString(),
+                State = scriptHostManager.State.ToString(),
                 Version = ScriptHost.Version,
                 VersionDetails = Utility.GetInformationalVersion(typeof(ScriptHost)),
-                Id = _scriptHostManager.Instance?.ScriptConfig.HostConfig.HostId
+                Id = await hostIdProvider.GetHostIdAsync(CancellationToken.None)
             };
 
-            var lastError = _scriptHostManager.LastError;
+            var lastError = scriptHostManager.LastError;
             if (lastError != null)
             {
                 status.Errors = new Collection<string>();
@@ -109,10 +123,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [HttpPost]
         [Route("admin/host/debug")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        [EnableDebugMode]
+        [TypeFilter(typeof(EnableDebugModeFilter))]
         public IActionResult LaunchDebugger()
         {
-            if (_webHostSettings.IsSelfHost)
+            if (_applicationHostOptions.Value.IsSelfHost)
             {
                 // If debugger is already running, this will be a no-op returning true.
                 if (Debugger.Launch())
@@ -144,10 +158,59 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [HttpPost]
         [Route("admin/host/restart")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        public IActionResult Restart()
+        public IActionResult Restart([FromServices] IScriptHostManager hostManager)
         {
-            _scriptHostManager.RestartHost();
-            return Ok(_webHostSettings);
+            Task ignore = hostManager.RestartHostAsync();
+            return Ok(_applicationHostOptions.Value);
+        }
+
+        /// <summary>
+        /// Currently this endpoint only supports taking the host offline and bringing it back online.
+        /// </summary>
+        /// <param name="state">The desired host state. See <see cref="ScriptHostState"/>.</param>
+        [HttpPut]
+        [Route("admin/host/state")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public async Task<IActionResult> SetState([FromBody] string state)
+        {
+            if (!Enum.TryParse<ScriptHostState>(state, ignoreCase: true, out ScriptHostState desiredState) ||
+                !(desiredState == ScriptHostState.Offline || desiredState == ScriptHostState.Running))
+            {
+                // currently we only allow states Offline and Running
+                return BadRequest();
+            }
+
+            var currentState = _scriptHostManager.State;
+            if (desiredState == currentState)
+            {
+                return Ok();
+            }
+            else if (desiredState == ScriptHostState.Running && currentState == ScriptHostState.Offline)
+            {
+                if (_environment.FileSystemIsReadOnly())
+                {
+                    return BadRequest();
+                }
+
+                // we're currently offline and the request is to bring the host back online
+                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, false);
+            }
+            else if (desiredState == ScriptHostState.Offline && currentState != ScriptHostState.Offline)
+            {
+                if (_environment.FileSystemIsReadOnly())
+                {
+                    return BadRequest();
+                }
+
+                // we're currently online and the request is to take the host offline
+                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true);
+            }
+            else
+            {
+                return BadRequest();
+            }
+
+            return Accepted();
         }
 
         [HttpGet]
@@ -155,14 +218,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Authorize(AuthenticationSchemes = AuthLevelAuthenticationDefaults.AuthenticationScheme)]
         [RequiresRunningHost]
         [Route("runtime/webhooks/{name}/{*extra}")]
-        public async Task<IActionResult> ExtensionWebHookHandler(string name, CancellationToken token)
+        public async Task<IActionResult> ExtensionWebHookHandler(string name, CancellationToken token, [FromServices] IScriptWebHookProvider provider)
         {
-            var provider = _scriptHostManager.BindingWebHookProvider;
-
-            var handler = provider.GetHandlerOrNull(name);
-            if (handler != null)
+            if (provider.TryGetHandler(name, out HttpHandler handler))
             {
-                string keyName = WebJobsSdkExtensionHookProvider.GetKeyName(name);
+                string keyName = DefaultScriptWebHookProvider.GetKeyName(name);
                 var authResult = await _authorizationService.AuthorizeAsync(User, keyName, PolicyNames.SystemAuthLevel);
                 if (!authResult.Succeeded)
                 {

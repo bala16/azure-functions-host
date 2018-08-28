@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         {
             Configuration = configuration;
 
-            if (ScriptSettingsManager.Instance.IsLinuxContainerEnvironment)
+            if (SystemEnvironment.Instance.IsLinuxContainerEnvironment())
             {
                 // Linux containers always start out in placeholder mode
                 ScriptSettingsManager.Instance.SetSetting(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "1");
@@ -27,12 +27,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public IServiceProvider ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services)
         {
             services.AddWebJobsScriptHostAuthentication();
             services.AddWebJobsScriptHostAuthorization();
-
-            return services.AddWebJobsScriptHost(Configuration);
+            services.AddWebJobsScriptHost(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

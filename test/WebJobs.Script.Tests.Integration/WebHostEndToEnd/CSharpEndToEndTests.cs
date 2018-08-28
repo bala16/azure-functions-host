@@ -8,8 +8,11 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.Rpc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.WebJobs.Script.Tests;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -159,7 +162,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
 
             Assert.NotNull(context);
             Assert.Equal(functionName, context.FunctionName);
-            Assert.Equal(Path.Combine(Fixture.Host.ScriptConfig.RootScriptPath, functionName), context.FunctionDirectory);
+            Assert.Equal(Path.Combine(Fixture.Host.ScriptOptions.RootScriptPath, functionName), context.FunctionDirectory);
         }
 
         [Fact]
@@ -253,36 +256,36 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
         //[InlineData("text/plain", "Name: Fabio Cavalcante, Location: Seattle")]
         //public async Task HttpTrigger_GetWithAccept_NegotiatesContent(string accept, string expectedBody)
         //{
-            //var input = new JObject
-            //{
-            //    { "name", "Fabio Cavalcante" },
-            //    { "location", "Seattle" }
-            //};
+        //var input = new JObject
+        //{
+        //    { "name", "Fabio Cavalcante" },
+        //    { "location", "Seattle" }
+        //};
 
-            //HttpRequestMessage request = new HttpRequestMessage
-            //{
-            //    RequestUri = new Uri(string.Format("http://localhost/api/httptrigger-dynamic")),
-            //    Method = HttpMethod.Post,
-            //    Content = new StringContent(input.ToString())
-            //};
-            //request.SetConfiguration(Fixture.RequestConfiguration);
-            //request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
-            //request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        //HttpRequestMessage request = new HttpRequestMessage
+        //{
+        //    RequestUri = new Uri(string.Format("http://localhost/api/httptrigger-dynamic")),
+        //    Method = HttpMethod.Post,
+        //    Content = new StringContent(input.ToString())
+        //};
+        //request.SetConfiguration(Fixture.RequestConfiguration);
+        //request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
+        //request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-            //Dictionary<string, object> arguments = new Dictionary<string, object>
-            //{
-            //    { "input", request },
-            //    { ScriptConstants.SystemTriggerParameterName, request }
-            //};
+        //Dictionary<string, object> arguments = new Dictionary<string, object>
+        //{
+        //    { "input", request },
+        //    { ScriptConstants.SystemTriggerParameterName, request }
+        //};
 
-            //await Fixture.Host.CallAsync("HttpTrigger-Dynamic", arguments);
+        //await Fixture.Host.CallAsync("HttpTrigger-Dynamic", arguments);
 
-            //HttpResponseMessage response = (HttpResponseMessage)request.Properties[ScriptConstants.AzureFunctionsHttpResponseKey];
-            //Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            //Assert.Equal(accept, response.Content.Headers.ContentType.MediaType);
+        //HttpResponseMessage response = (HttpResponseMessage)request.Properties[ScriptConstants.AzureFunctionsHttpResponseKey];
+        //Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        //Assert.Equal(accept, response.Content.Headers.ContentType.MediaType);
 
-            //string body = await response.Content.ReadAsStringAsync();
-            //Assert.Equal(expectedBody, body);
+        //string body = await response.Content.ReadAsStringAsync();
+        //Assert.Equal(expectedBody, body);
         //}
 
         public class TestFixture : EndToEndTestFixture
@@ -294,7 +297,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
                 CreateSharedAssemblies();
             }
 
-            public TestFixture() : base(ScriptRoot, "csharp")
+            public TestFixture() : base(ScriptRoot, "csharp", LanguageWorkerConstants.DotNetLanguageWorkerName)
             {
             }
 
@@ -348,6 +351,30 @@ namespace SecondaryDependency
                     .WithReferences(MetadataReference.CreateFromFile(secondaryDependencyPath), MetadataReference.CreateFromFile(typeof(object).Assembly.Location));
 
                 primaryCompilation.Emit(Path.Combine(sharedAssembliesPath, "PrimaryDependency.dll"));
+            }
+
+            public override void ConfigureJobHost(IWebJobsBuilder webJobsBuilder)
+            {
+                base.ConfigureJobHost(webJobsBuilder);
+
+                webJobsBuilder.AddAzureStorage();
+                webJobsBuilder.Services.Configure<ScriptJobHostOptions>(o =>
+                {
+                    // Only load the functions we care about
+                    o.Functions = new[]
+                    {
+                        "AssembliesFromSharedLocation",
+                        "HttpTrigger-Dynamic",
+                        "HttpTrigger-Scenarios",
+                        "HttpTriggerToBlob",
+                        "FunctionExecutionContext",
+                        "LoadScriptReference",
+                        "ManualTrigger",
+                        "MultipleOutputs",
+                        "QueueTriggerToBlob",
+                        "Scenarios"
+                    };
+                });
             }
         }
 

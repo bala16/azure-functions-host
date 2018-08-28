@@ -2,8 +2,11 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Filters
 {
@@ -12,8 +15,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Filters
     /// where functions can be invoked.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-    public sealed class RequiresRunningHostAttribute : ActionFilterAttribute
+    public sealed class RequiresRunningHostAttribute : Attribute, IFilterFactory
     {
+        private ObjectFactory _factory;
+
         public RequiresRunningHostAttribute(int timeoutSeconds = ScriptConstants.HostTimeoutSeconds, int pollingIntervalMilliseconds = ScriptConstants.HostPollingIntervalMilliseconds)
         {
             TimeoutSeconds = timeoutSeconds;
@@ -24,16 +29,50 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Filters
 
         public int PollingIntervalMilliseconds { get; }
 
-        public override async Task OnActionExecutionAsync(ActionExecutingContext actionContext, ActionExecutionDelegate next)
+        public bool IsReusable => false;
+
+        public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
         {
-            var scriptHostManager = (WebScriptHostManager)actionContext.HttpContext.Items[ScriptConstants.AzureFunctionsHostManagerKey];
+            if (_factory == null)
+            {
+               _factory = ActivatorUtilities.CreateFactory(typeof(RunningHostCheckAttribute), Type.EmptyTypes);
+            }
 
-            // If the host is not ready, we'll wait a bit for it to initialize.
-            // This might happen if http requests come in while the host is starting
-            // up for the first time, or if it is restarting.
-            await scriptHostManager.DelayUntilHostReady(TimeoutSeconds, PollingIntervalMilliseconds);
+            var hostCheckFilter = (RunningHostCheckAttribute)_factory(serviceProvider, null);
 
-            await next();
+            hostCheckFilter.PollingIntervalMilliseconds = PollingIntervalMilliseconds;
+            hostCheckFilter.TimeoutSeconds = TimeoutSeconds;
+
+            return hostCheckFilter;
+        }
+
+        private class RunningHostCheckAttribute : ActionFilterAttribute
+        {
+            private readonly IScriptHostManager _hostManager;
+
+            public RunningHostCheckAttribute(IScriptHostManager hostManager)
+            {
+                _hostManager = hostManager;
+            }
+
+            public int TimeoutSeconds { get; internal set; }
+
+            public int PollingIntervalMilliseconds { get; internal set; }
+
+            public override async Task OnActionExecutionAsync(ActionExecutingContext actionContext, ActionExecutionDelegate next)
+            {
+                // If the host is not ready, we'll wait a bit for it to initialize.
+                // This might happen if http requests come in while the host is starting
+                // up for the first time, or if it is restarting.
+                bool hostReady = await _hostManager.DelayUntilHostReady(TimeoutSeconds, PollingIntervalMilliseconds);
+
+                if (!hostReady)
+                {
+                    throw new HttpException(HttpStatusCode.ServiceUnavailable, "Function host is not running.");
+                }
+
+                await next();
+            }
         }
     }
 }

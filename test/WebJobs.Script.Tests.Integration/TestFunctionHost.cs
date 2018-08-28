@@ -1,9 +1,11 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -12,9 +14,14 @@ using System.Xml;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.WebJobs.Script.WebHost;
+using Microsoft.Azure.WebJobs.Script.WebHost.DependencyInjection;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.WebJobs.Script.Tests;
 using Newtonsoft.Json.Linq;
 
@@ -22,44 +29,73 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 {
     public class TestFunctionHost : IDisposable
     {
-        private readonly WebHostSettings _hostSettings;
+        private readonly ScriptApplicationHostOptions _hostOptions;
         private readonly TestServer _testServer;
         private readonly string _appRoot;
         private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
+        private readonly WebJobsScriptHostService _hostService;
 
-        public TestFunctionHost(string appRoot)
+        public TestFunctionHost(string appRoot,
+            Action<IWebJobsBuilder> configureJobHost,
+            Action<IConfigurationBuilder> configureAppConfiguration = null)
         {
             _appRoot = appRoot;
 
-            _hostSettings = new WebHostSettings
+            _hostOptions = new ScriptApplicationHostOptions
             {
                 IsSelfHost = true,
                 ScriptPath = _appRoot,
                 LogPath = Path.Combine(Path.GetTempPath(), @"Functions"),
-                SecretsPath = Environment.CurrentDirectory // not used
+                SecretsPath = Environment.CurrentDirectory, // not used
+                HasParentScope = true
             };
 
-            _testServer = new TestServer(
-                AspNetCore.WebHost.CreateDefaultBuilder()
-                .UseStartup<Startup>()
+            var factory = new TestOptionsFactory<ScriptApplicationHostOptions>(_hostOptions);
+            var optionsMonitor = new OptionsMonitor<ScriptApplicationHostOptions>(factory, Array.Empty<IOptionsChangeTokenSource<ScriptApplicationHostOptions>>(), factory);
+            var builder = new WebHostBuilder()
                 .ConfigureServices(services =>
-                {
-                    services.Replace(new ServiceDescriptor(typeof(WebHostSettings), _hostSettings));
-                    services.Replace(new ServiceDescriptor(typeof(ILoggerProviderFactory), new TestLoggerProviderFactory(_loggerProvider, includeDefaultLoggerProviders: false)));
-                    services.Replace(new ServiceDescriptor(typeof(ISecretManager), new TestSecretManager()));
-                }));
+                  {
+                      services.Replace(new ServiceDescriptor(typeof(ISecretManagerProvider), new TestSecretManagerProvider(new TestSecretManager())));
+                      services.Replace(ServiceDescriptor.Singleton<IServiceProviderFactory<IServiceCollection>>(new WebHostServiceProviderFactory()));
+                      services.Replace(new ServiceDescriptor(typeof(IOptions<ScriptApplicationHostOptions>), new OptionsWrapper<ScriptApplicationHostOptions>(_hostOptions)));
+                      services.Replace(new ServiceDescriptor(typeof(IOptionsMonitor<ScriptApplicationHostOptions>), optionsMonitor));
+
+                      services.AddSingleton<IConfigureBuilder<IConfigurationBuilder>>(_ => new DelegatedConfigureBuilder<IConfigurationBuilder>(configureAppConfiguration));
+                  })
+                  .AddScriptHostBuilder(webJobsBuilder =>
+                  {
+                      var loggingBuilder = new LoggingBuilder(webJobsBuilder.Services);
+                      loggingBuilder.AddProvider(_loggerProvider);
+                      loggingBuilder.AddFilter<TestLoggerProvider>(_ => true);
+
+                      webJobsBuilder.AddAzureStorage();
+
+                      configureJobHost?.Invoke(webJobsBuilder);
+                  })
+                  .UseStartup<Startup>();
+
+            _testServer = new TestServer(builder);
 
             HttpClient = new HttpClient(new UpdateContentLengthHandler(_testServer.CreateHandler()));
             HttpClient.BaseAddress = new Uri("https://localhost/");
+
+            var manager = _testServer.Host.Services.GetService<IScriptHostManager>();
+            _hostService = manager as WebJobsScriptHostService;
+
+            StartAsync().GetAwaiter().GetResult();
         }
 
-        public ScriptHostConfiguration ScriptConfig => _testServer.Host.Services.GetService<WebHostResolver>().GetScriptHostConfiguration(_hostSettings);
+        public IServiceProvider JobHostServices => _hostService.Services;
 
-        public ISecretManager SecretManager => _testServer.Host.Services.GetService<ISecretManager>();
+        public ScriptJobHostOptions ScriptOptions => JobHostServices.GetService<IOptions<ScriptJobHostOptions>>().Value;
 
-        public string LogPath => _hostSettings.LogPath;
+        public ISecretManager SecretManager => _testServer.Host.Services.GetService<ISecretManagerProvider>().Current;
 
-        public string ScriptPath => _hostSettings.ScriptPath;
+        public string LogPath => _hostOptions.LogPath;
+
+        public string ScriptPath => _hostOptions.ScriptPath;
+
+        public HttpClient HttpClient { get; private set; }
 
         public async Task<string> GetMasterKeyAsync()
         {
@@ -73,28 +109,31 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             return secrets.First().Value;
         }
 
-        public HttpClient HttpClient { get; private set; }
-
-        public async Task StartAsync()
+        private async Task StartAsync()
         {
             bool running = false;
             while (!running)
             {
-                running = await IsHostRunning(HttpClient);
+                running = await IsHostStarted(HttpClient);
 
                 if (!running)
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(50);
                 }
             }
         }
 
         public void SetNugetPackageSources(params string[] sources)
         {
+            WriteNugetPackageSources(_appRoot, sources);
+        }
+
+        public static void WriteNugetPackageSources(string appRoot, params string[] sources)
+        {
             XmlWriterSettings settings = new XmlWriterSettings();
             settings.Indent = true;
 
-            using (XmlWriter writer = XmlWriter.Create(Path.Combine(_appRoot, "nuget.config"), settings))
+            using (XmlWriter writer = XmlWriter.Create(Path.Combine(appRoot, "nuget.config"), settings))
             {
                 writer.WriteStartElement("configuration");
                 writer.WriteStartElement("packageSources");
@@ -133,39 +172,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task InstallBindingExtension(string packageName, string packageVersion)
-        {
-            HostSecretsInfo secrets = await SecretManager.GetHostSecretsAsync();
-            string uri = $"admin/host/extensions?code={secrets.MasterKey}";
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, uri);
-
-            string payload = new JObject
-            {
-                { "id", packageName },
-                {"version", packageVersion }
-            }.ToString(Newtonsoft.Json.Formatting.None);
-
-            request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-            var response = await HttpClient.SendAsync(request);
-            var jobStatusUri = response.Headers.Location;
-            string status = null;
-            do
-            {
-                await Task.Delay(500);
-                response = await CheckExtensionInstallStatus(jobStatusUri);
-                var jobStatus = await response.Content.ReadAsAsync<JObject>();
-                status = jobStatus["status"].ToString();
-            } while (status == "Started");
-
-            if (status != "Succeeded")
-            {
-                throw new InvalidOperationException("Failed to install extension.");
-            }
-
-            // TODO: Find a better way to ensure the site has restarted.
-            await Task.Delay(3000);
-        }
-
         private async Task<HttpResponseMessage> CheckExtensionInstallStatus(Uri jobLocation)
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, jobLocation);
@@ -196,20 +202,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _testServer.Dispose();
         }
 
-        private async Task<bool> IsHostRunning(HttpClient client)
+        private async Task<bool> IsHostStarted(HttpClient client)
         {
-            HostSecretsInfo secrets = await SecretManager.GetHostSecretsAsync();
-
-            // Workaround for https://github.com/Azure/azure-functions-host/issues/2397 as the base URL
-            // doesn't currently start the host. 
-            // Note: the master key "1234" is from the TestSecretManager.
-            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"/admin/functions/dummyName/status?code={secrets.MasterKey}"))
-            {
-                using (HttpResponseMessage response = await client.SendAsync(request))
-                {
-                    return response.StatusCode == HttpStatusCode.NoContent || response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound;
-                }
-            }
+            HostStatus status = await GetHostStatusAsync();
+            return status.State == $"{ScriptHostState.Running}" || status.State == $"{ScriptHostState.Error}";
         }
 
         private class UpdateContentLengthHandler : DelegatingHandler
@@ -229,6 +225,17 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 return base.SendAsync(request, cancellationToken);
             }
+        }
+
+        private class LoggingBuilder : ILoggingBuilder
+        {
+            private readonly IServiceCollection _services;
+
+            public LoggingBuilder(IServiceCollection services)
+            {
+                _services = services;
+            }
+            public IServiceCollection Services => _services;
         }
     }
 }

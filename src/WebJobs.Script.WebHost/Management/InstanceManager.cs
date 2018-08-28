@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 {
@@ -19,22 +20,32 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private static HostAssignmentContext _assignmentContext;
         private static object _assignmentLock = new object();
 
-        private readonly WebHostSettings _webHostSettings;
+        private readonly ScriptApplicationHostOptions _webHostSettings;
         private readonly ILogger _logger;
-        private readonly ScriptSettingsManager _settingsManager;
         private readonly HttpClient _client;
+        private readonly IScriptWebHostEnvironment _webHostEnvironment;
 
-        public InstanceManager(ScriptSettingsManager settingsManager, WebHostSettings webHostSettings, ILoggerFactory loggerFactory, HttpClient client)
+        public InstanceManager(IOptions<ScriptApplicationHostOptions> webHostSettings, ILoggerFactory loggerFactory, HttpClient client, IScriptWebHostEnvironment webHostEnvironment)
         {
-            _settingsManager = settingsManager;
-            _webHostSettings = webHostSettings;
+            if (webHostSettings == null)
+            {
+                throw new ArgumentNullException(nameof(webHostSettings));
+            }
+
+            if (loggerFactory == null)
+            {
+                throw new ArgumentNullException(nameof(loggerFactory));
+            }
+
+            _client = client ?? throw new ArgumentNullException(nameof(client));
+            _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
+            _webHostSettings = webHostSettings.Value;
             _logger = loggerFactory.CreateLogger(LogCategories.Startup);
-            _client = client;
         }
 
         public bool StartAssignment(HostAssignmentContext context)
         {
-            if (!WebScriptHostManager.InStandbyMode)
+            if (!_webHostEnvironment.InStandbyMode)
             {
                 _logger.LogError("Assign called while host is not in placeholder mode");
                 return false;
@@ -95,7 +106,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 // has been initiated, so setting this flag here is sufficient to ensure
                 // that any subsequent incoming requests while the assign is in progress
                 // will be delayed until complete
-                WebScriptHostManager.DelayRequests = true;
+                _webHostEnvironment.DelayRequests();
 
                 // first make all environment and file system changes required for
                 // the host to be specialized
@@ -104,8 +115,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 // all assignment settings/files have been applied so we can flip
                 // the switch now on specialization
                 _logger.LogInformation("Triggering specialization");
-                _settingsManager.SetSetting(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "0");
-                _settingsManager.SetSetting(EnvironmentSettingNames.AzureWebsiteContainerReady, "1");
+                _webHostEnvironment.FlagAsSpecializedAndReady();
             }
             catch (Exception ex)
             {
@@ -114,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
             finally
             {
-                WebScriptHostManager.DelayRequests = false;
+                _webHostEnvironment.ResumeRequests();
             }
         }
 

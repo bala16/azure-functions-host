@@ -4,6 +4,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Script.Extensibility
@@ -11,43 +12,21 @@ namespace Microsoft.Azure.WebJobs.Script.Extensibility
     /// <summary>
     /// Base class for providers of <see cref="ScriptBinding"/>s.
     /// </summary>
-    public abstract class ScriptBindingProvider
+    public abstract class ScriptBindingProvider : IScriptBindingProvider
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ScriptBindingProvider"/> class.
         /// </summary>
-        /// <param name="config">The <see cref="JobHostConfiguration"/>.</param>
-        /// <param name="hostMetadata">The host configuration metadata.</param>
         /// <param name="logger">The <see cref="ILogger"/> that can be used to log trace events.</param>
-        protected ScriptBindingProvider(JobHostConfiguration config, JObject hostMetadata, ILogger logger)
+        protected ScriptBindingProvider(ILogger logger)
         {
-            Config = config;
-            Metadata = hostMetadata;
             Logger = logger;
         }
-
-        /// <summary>
-        /// Gets the <see cref="JobHostConfiguration"/>.
-        /// </summary>
-        protected JobHostConfiguration Config { get; private set; }
-
-        /// <summary>
-        /// Gets the host configuration metadata.
-        /// </summary>
-        protected JObject Metadata { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="ILogger"/> that can be used to log trace events.
         /// </summary>
         protected ILogger Logger { get; private set; }
-
-        /// <summary>
-        /// Called early in the host initialization pipeline, before bindings have been created
-        /// to allow the provider to perform host level initialization, extension registration, etc.
-        /// </summary>
-        public virtual void Initialize()
-        {
-        }
 
         /// <summary>
         /// Create a <see cref="ScriptBinding"/> for the specified metadata if

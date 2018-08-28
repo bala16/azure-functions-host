@@ -2,12 +2,16 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using Microsoft.Azure.WebJobs.Script.Binding;
-using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Description;
-using Microsoft.Azure.WebJobs.Script.Eventing;
+using Microsoft.Azure.WebJobs.Script.Extensibility;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Microsoft.WebJobs.Script.Tests;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -18,22 +22,25 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
     {
         private readonly FunctionDescriptorProvider _provider;
         private readonly ScriptHost _host;
-        private readonly ScriptSettingsManager _settingsManager;
 
         public FunctionDescriptorProviderTests()
         {
             string rootPath = Path.Combine(Environment.CurrentDirectory, @"TestScripts\Node");
-            ScriptHostConfiguration config = new ScriptHostConfiguration
-            {
-                RootScriptPath = rootPath
-            };
 
-            var environment = new Mock<IScriptHostEnvironment>();
-            var eventManager = new Mock<IScriptEventManager>();
-            _settingsManager = ScriptSettingsManager.Instance;
-            _host = new ScriptHost(environment.Object, eventManager.Object, config, _settingsManager);
-            _host.Initialize();
-            _provider = new TestDescriptorProvider(_host, config);
+            var host = new HostBuilder()
+                .ConfigureDefaultTestWebScriptHost(webJobsBuilder =>
+                {
+                    webJobsBuilder.AddAzureStorage();
+                },
+                o =>
+                {
+                    o.ScriptPath = rootPath;
+                    o.LogPath = TestHelpers.GetHostLogFileDirectory().Parent.FullName;
+                })
+                .Build();
+            _host = host.GetScriptHost();
+            _host.InitializeAsync().GetAwaiter().GetResult();
+            _provider = new TestDescriptorProvider(_host, host.Services.GetService<IOptions<ScriptJobHostOptions>>().Value, host.Services.GetService<ICollection<IScriptBindingProvider>>());
         }
 
         [Fact]
@@ -84,13 +91,13 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         public void VerifyResolvedBindings_WithNoBindingMatch_ThrowsExpectedException()
         {
             FunctionMetadata functionMetadata = new FunctionMetadata();
-            BindingMetadata triggerMetadata = BindingMetadata.Create(JObject.Parse("{\"type\": \"blobTrigger\",\"name\": \"req\",\"direction\": \"in\"}"));
+            BindingMetadata triggerMetadata = BindingMetadata.Create(JObject.Parse("{\"type\": \"blobTrigger\",\"name\": \"req\",\"direction\": \"in\", \"blobPath\": \"test\"}"));
             BindingMetadata bindingMetadata = BindingMetadata.Create(JObject.Parse("{\"type\": \"unknownbinding\",\"name\": \"blob\",\"direction\": \"in\"}"));
 
             functionMetadata.Bindings.Add(triggerMetadata);
             functionMetadata.Bindings.Add(bindingMetadata);
 
-            var ex = Assert.Throws<ScriptConfigurationException>(() =>
+            var ex = Assert.Throws<FunctionConfigurationException>(() =>
             {
                 _provider.TryCreate(functionMetadata, out FunctionDescriptor descriptor);
             });
@@ -127,7 +134,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             functionMetadata.Bindings.Add(metadata);
 
-            var ex = Assert.Throws<ScriptConfigurationException>(() =>
+            var ex = Assert.Throws<FunctionConfigurationException>(() =>
             {
                 _provider.TryCreate(functionMetadata, out FunctionDescriptor descriptor);
             });
@@ -197,7 +204,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
         private class TestDescriptorProvider : FunctionDescriptorProvider
         {
-            public TestDescriptorProvider(ScriptHost host, ScriptHostConfiguration config) : base(host, config)
+            public TestDescriptorProvider(ScriptHost host, ScriptJobHostOptions config, ICollection<IScriptBindingProvider> bindingProviders)
+                : base(host, config, bindingProviders)
             {
             }
 

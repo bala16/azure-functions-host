@@ -19,16 +19,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Features
 {
     internal class FunctionExecutionFeature : IFunctionExecutionFeature
     {
-        private readonly ScriptHost _host;
+        private readonly IScriptJobHost _host;
         private readonly FunctionDescriptor _descriptor;
-        private readonly ScriptSettingsManager _settingsManager;
+        private readonly IEnvironment _environment;
         private readonly ILogger _logger;
 
-        public FunctionExecutionFeature(ScriptHost host, FunctionDescriptor descriptor, ScriptSettingsManager settingsManager, ILoggerFactory loggerFactory)
+        public FunctionExecutionFeature(IScriptJobHost host, FunctionDescriptor descriptor, IEnvironment environment, ILoggerFactory loggerFactory)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _descriptor = descriptor;
-            _settingsManager = settingsManager;
+            _environment = environment;
             _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostMetrics);
         }
 
@@ -49,8 +49,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Features
                 coldStartData = new JObject
                 {
                     { "requestId", request.GetRequestId() },
-                    { "language", Descriptor.Metadata.ScriptType.ToString() },
-                    { "sku", _settingsManager.WebsiteSku }
+                    { "language", Descriptor.Metadata.Language },
+                    { "sku", _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku) }
                 };
 
                 var dispatchStopwatch = request.GetItemOrDefault<Stopwatch>(ScriptConstants.AzureFunctionsColdStartKey);

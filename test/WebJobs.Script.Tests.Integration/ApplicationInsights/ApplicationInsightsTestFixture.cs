@@ -5,22 +5,20 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Azure.WebJobs.Script.WebHost;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.WebJobs.Script.Tests;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests.ApplicationInsights
 {
     public abstract class ApplicationInsightsTestFixture : IDisposable
     {
-        private readonly TestServer _testServer;
+        public const string ApplicationInsightsKey = "some_key";
 
         public ApplicationInsightsTestFixture(string scriptRoot, string testId)
         {
-            HostSettings = new WebHostSettings
+            WebHostOptions = new ScriptApplicationHostOptions
             {
                 IsSelfHost = true,
                 ScriptPath = Path.Combine(Environment.CurrentDirectory, scriptRoot),
@@ -28,60 +26,56 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.ApplicationInsights
                 SecretsPath = Environment.CurrentDirectory // not used
             };
 
-            var hostBuilder = Program.CreateWebHostBuilder()
-                .ConfigureAppConfiguration((builderContext, config) =>
+            TestHost = new TestFunctionHost(Path.Combine(Environment.CurrentDirectory, scriptRoot),
+                jobHostBuilder =>
                 {
-                    config.AddInMemoryCollection(new Dictionary<string, string>
+                    jobHostBuilder.Services.AddSingleton<ITelemetryChannel>(_ => Channel);
+
+                    jobHostBuilder.Services.Configure<ScriptJobHostOptions>(o =>
                     {
-                        [EnvironmentSettingNames.AppInsightsInstrumentationKey] = TestChannelLoggerProviderFactory.ApplicationInsightsKey
+                        o.Functions = new[]
+                        {
+                            "Scenarios",
+                            "HttpTrigger-Scenarios"
+                        };
                     });
-                })
-                .ConfigureServices(services =>
+                },
+                configurationBuilder =>
                 {
-                    services.Replace(new ServiceDescriptor(typeof(WebHostSettings), HostSettings));
-                    services.Replace(new ServiceDescriptor(typeof(ILoggerProviderFactory), new TestChannelLoggerProviderFactory(Channel)));
-                    services.Replace(new ServiceDescriptor(typeof(ISecretManager), new TestSecretManager()));
+                    configurationBuilder.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        [EnvironmentSettingNames.AppInsightsInstrumentationKey] = ApplicationInsightsKey
+                    });
                 });
 
-            _testServer = new TestServer(hostBuilder);
-
-            var scriptConfig = _testServer.Host.Services.GetService<WebHostResolver>().GetScriptHostConfiguration(HostSettings);
-
-            InitializeConfig(scriptConfig);
-
-            HttpClient = _testServer.CreateClient();
-            HttpClient.BaseAddress = new Uri("https://localhost/");
+            HttpClient = TestHost.HttpClient;
 
             TestHelpers.WaitForWebHost(HttpClient);
         }
 
-        public ScriptHost GetScriptHost()
-        {
-            return _testServer.Host.Services.GetService<WebHostResolver>().GetWebScriptHostManager(HostSettings).Instance;
-        }
-
         public TestTelemetryChannel Channel { get; private set; } = new TestTelemetryChannel();
 
-        public WebHostSettings HostSettings { get; private set; }
+        public TestFunctionHost TestHost { get; }
+
+        public ScriptApplicationHostOptions WebHostOptions { get; private set; }
 
         public HttpClient HttpClient { get; private set; }
 
-        protected void InitializeConfig(ScriptHostConfiguration config)
-        {
-            config.OnConfigurationApplied = c =>
-            {
-                // turn this off as it makes validation tough
-                config.HostConfig.Aggregator.IsEnabled = false;
-
-                // Overwrite the generated function whitelist to only include two functions.
-                c.Functions = new[] { "Scenarios", "HttpTrigger-Scenarios" };
-            };
-        }
-
         public void Dispose()
         {
-            _testServer?.Dispose();
+            TestHost?.Dispose();
             HttpClient?.Dispose();
+        }
+
+        private class ScriptHostBuilder : IConfigureBuilder<IWebJobsBuilder>
+        {
+            public void Configure(IWebJobsBuilder builder)
+            {
+                builder.Services.Configure<ScriptJobHostOptions>(o =>
+                {
+                    o.Functions = new[] { "Scenarios", "HttpTrigger-Scenarios" };
+                });
+            }
         }
     }
 }

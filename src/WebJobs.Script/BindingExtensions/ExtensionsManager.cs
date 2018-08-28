@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -17,6 +16,7 @@ using Microsoft.Azure.WebJobs.Script.Models;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using static Microsoft.Azure.WebJobs.Script.ScriptConstants;
 using static Microsoft.DotNet.PlatformAbstractions.RuntimeEnvironment;
 
@@ -28,11 +28,11 @@ namespace Microsoft.Azure.WebJobs.Script.BindingExtensions
         private readonly ILogger _logger;
         private string _nugetFallbackPath;
 
-        public ExtensionsManager(string scriptRootPath, ILogger logger, string nugetFallbackPath = null)
+        public ExtensionsManager(IOptions<ScriptJobHostOptions> hostOptions, ILogger<ExtensionsManager> logger)
         {
-            _scriptRootPath = scriptRootPath;
+            _scriptRootPath = hostOptions.Value.RootScriptPath;
+            _nugetFallbackPath = hostOptions.Value.NugetFallBackPath;
             _logger = logger;
-            _nugetFallbackPath = nugetFallbackPath;
         }
 
         internal string ProjectPath => Path.Combine(_scriptRootPath, ExtensionsProjectFileName);
@@ -45,6 +45,10 @@ namespace Microsoft.Azure.WebJobs.Script.BindingExtensions
             }
 
             var project = await GetOrCreateProjectAsync(ProjectPath);
+
+            // Ensure the metadata generator version we're using is what we expect
+            project.AddPackageReference(ExtensionsPackageId, "1.0.0");
+
             foreach (var extensionReference in references)
             {
                 project.AddPackageReference(extensionReference.Id, extensionReference.Version);
@@ -106,7 +110,6 @@ namespace Microsoft.Azure.WebJobs.Script.BindingExtensions
 
             try
             {
-                string runtimeIdentifierParameter = GetRuntimeIdentifier();
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = dotnetPath,
@@ -116,7 +119,7 @@ namespace Microsoft.Azure.WebJobs.Script.BindingExtensions
                     UseShellExecute = false,
                     ErrorDialog = false,
                     WorkingDirectory = projectFolder,
-                    Arguments = $"build \"{ExtensionsProjectFileName}\" -o bin --force --no-incremental -r {runtimeIdentifierParameter}"
+                    Arguments = $"build \"{ExtensionsProjectFileName}\" -o bin --force --no-incremental"
                 };
 
                 string nugetPath = Path.Combine(Path.GetDirectoryName(ProjectPath), "nuget.config");
@@ -184,11 +187,26 @@ namespace Microsoft.Azure.WebJobs.Script.BindingExtensions
         {
             foreach (DictionaryEntry environmentVariable in Environment.GetEnvironmentVariables(EnvironmentVariableTarget.Process))
             {
-                startInfo.Environment.Add(environmentVariable.Key?.ToString(), environmentVariable.Value?.ToString());
+                if (!TryAdd(startInfo.Environment, environmentVariable.Key?.ToString(), environmentVariable.Value?.ToString()))
+                {
+                    _logger.LogWarning($"Unable to set environment variable '{environmentVariable.Key}' during extension installation. "
+                        + "A key with the same name already exists");
+                }
             }
 
-            startInfo.EnvironmentVariables.Add("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
-            startInfo.EnvironmentVariables.Add(NugetXmlDocModeSettingName, NugetXmlDocSkipMode);
+            TryAdd(startInfo.Environment, "DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
+            TryAdd(startInfo.Environment, NugetXmlDocModeSettingName, NugetXmlDocSkipMode);
+        }
+
+        private static bool TryAdd(IDictionary<string, string> dictionary, string key, string value)
+        {
+            if (!dictionary.ContainsKey(key))
+            {
+                dictionary.Add(key, value);
+                return true;
+            }
+
+            return false;
         }
 
         private void ApplyNugetFallbackFolderConfiguration(ProcessStartInfo startInfo)
@@ -263,7 +281,7 @@ namespace Microsoft.Azure.WebJobs.Script.BindingExtensions
 
             root.AddItemGroup()
                 .AddItem(PackageReferenceElementName, ExtensionsPackageId)
-                .AddMetadata(PackageReferenceVersionElementName, "1.0.0-beta2", true);
+                .AddMetadata(PackageReferenceVersionElementName, "1.0.0", true);
 
             return root;
         }

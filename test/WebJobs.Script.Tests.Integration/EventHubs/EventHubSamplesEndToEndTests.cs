@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs.Script.Config;
+using Microsoft.Azure.WebJobs.Script.Rpc;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -59,19 +64,25 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.EventHubs
                 // above have been processed
                 logs = _fixture.Host.GetLog();
                 return ids.All(p => logs.Contains(p));
-            });
+            }, userMessageCallback: _fixture.Host.GetLog);
 
             Assert.True(logs.Contains("IsArray true"));
         }
 
         public class TestFixture : EndToEndTestFixture
         {
-            public TestFixture() :
-                base(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sample"), "samples", "Microsoft.Azure.WebJobs.Extensions.EventHubs", "3.0.0-beta4-11268")
+            public TestFixture()
+                : base(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sample"), "samples", LanguageWorkerConstants.NodeLanguageWorkerName, "Microsoft.Azure.WebJobs.Extensions.EventHubs", "3.0.0-beta*")
             {
             }
 
-            protected override IEnumerable<string> GetActiveFunctions() => new[] { "EventHubTrigger" };
+            public override void ConfigureJobHost(IWebJobsBuilder webJobsBuilder)
+            {
+                webJobsBuilder.Services.Configure<ScriptJobHostOptions>(o =>
+                {
+                    o.Functions = new[] { "EventHubTrigger" };
+                });
+            }
         }
     }
 }

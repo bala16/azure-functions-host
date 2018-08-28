@@ -10,23 +10,30 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Binding;
+using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.Extensibility;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
     internal sealed class DotNetFunctionDescriptorProvider : FunctionDescriptorProvider, IDisposable
     {
+        private readonly IMetricsLogger _metricsLogger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver> _compilationServiceFactory;
 
-        public DotNetFunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config)
-           : this(host, config, new DotNetCompilationServiceFactory(config.HostConfig.LoggerFactory))
+        public DotNetFunctionDescriptorProvider(ScriptHost host, ScriptJobHostOptions config, ICollection<IScriptBindingProvider> bindingProviders, IMetricsLogger metricsLogger, ILoggerFactory loggerFactory)
+           : this(host, config, bindingProviders, new DotNetCompilationServiceFactory(loggerFactory), metricsLogger, loggerFactory)
         {
         }
 
-        public DotNetFunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config,
-            ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver> compilationServiceFactory)
-            : base(host, config)
+        public DotNetFunctionDescriptorProvider(ScriptHost host, ScriptJobHostOptions config, ICollection<IScriptBindingProvider> bindingProviders,
+            ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver> compilationServiceFactory, IMetricsLogger metricsLogger, ILoggerFactory loggerFactory)
+            : base(host, config, bindingProviders)
         {
+            _metricsLogger = metricsLogger;
+            _loggerFactory = loggerFactory;
             _compilationServiceFactory = compilationServiceFactory;
         }
 
@@ -52,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             functionDescriptor = null;
 
             // We can only handle script types supported by the current compilation service factory
-            if (!_compilationServiceFactory.SupportedScriptTypes.Contains(functionMetadata.ScriptType))
+            if (!_compilationServiceFactory.SupportedLanguages.Contains(functionMetadata.Language))
             {
                 return false;
             }
@@ -62,7 +69,15 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         protected override IFunctionInvoker CreateFunctionInvoker(string scriptFilePath, BindingMetadata triggerMetadata, FunctionMetadata functionMetadata, Collection<FunctionBinding> inputBindings, Collection<FunctionBinding> outputBindings)
         {
-            return new DotNetFunctionInvoker(Host, functionMetadata, inputBindings, outputBindings, new FunctionEntryPointResolver(functionMetadata.EntryPoint), _compilationServiceFactory);
+            return new DotNetFunctionInvoker(Host,
+                functionMetadata,
+                inputBindings,
+                outputBindings,
+                new FunctionEntryPointResolver(functionMetadata.EntryPoint),
+                _compilationServiceFactory,
+                _loggerFactory,
+                _metricsLogger,
+                BindingProviders);
         }
 
         protected override Collection<ParameterDescriptor> GetFunctionParameters(IFunctionInvoker functionInvoker, FunctionMetadata functionMetadata,
@@ -136,7 +151,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                         //   Justification for this cariation of the programming model is that declaring 'out' parameters is (deliberately)
                         //   awkward in F#, they require opening System.Runtime.InteropServices and adding the [<Out>] attribute, and using
                         //   a byref parameter. In contrast declaring a byref parameter alone (neither labelled In nor Out) is simple enough.
-                        if (parameter.IsOut || (functionMetadata.ScriptType == ScriptType.FSharp && parameterIsByRef && !parameter.IsIn))
+                        if (parameter.IsOut || (functionMetadata.Language == DotNetScriptTypes.FSharp && parameterIsByRef && !parameter.IsIn))
                         {
                             descriptor.Attributes |= ParameterAttributes.Out;
                         }

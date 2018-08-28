@@ -20,15 +20,18 @@ namespace Microsoft.Azure.WebJobs.Script.Description
     {
         private static readonly Regex BindingNameValidationRegex = new Regex(string.Format("^([a-zA-Z][a-zA-Z0-9]{{0,127}}|{0})$", Regex.Escape(ScriptConstants.SystemReturnParameterBindingName)), RegexOptions.Compiled);
 
-        protected FunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config)
+        protected FunctionDescriptorProvider(ScriptHost host, ScriptJobHostOptions config, ICollection<IScriptBindingProvider> bindingProviders)
         {
             Host = host;
             Config = config;
+            BindingProviders = bindingProviders;
         }
 
         protected ScriptHost Host { get; private set; }
 
-        protected ScriptHostConfiguration Config { get; private set; }
+        protected ScriptJobHostOptions Config { get; private set; }
+
+        protected ICollection<IScriptBindingProvider> BindingProviders { get; private set; }
 
         public virtual bool TryCreate(FunctionMetadata functionMetadata, out FunctionDescriptor functionDescriptor)
         {
@@ -40,8 +43,8 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             ValidateFunction(functionMetadata);
 
             // parse the bindings
-            Collection<FunctionBinding> inputBindings = FunctionBinding.GetBindings(Config, functionMetadata.InputBindings, FileAccess.Read);
-            Collection<FunctionBinding> outputBindings = FunctionBinding.GetBindings(Config, functionMetadata.OutputBindings, FileAccess.Write);
+            Collection<FunctionBinding> inputBindings = FunctionBinding.GetBindings(Config, BindingProviders, functionMetadata.InputBindings, FileAccess.Read);
+            Collection<FunctionBinding> outputBindings = FunctionBinding.GetBindings(Config, BindingProviders, functionMetadata.OutputBindings, FileAccess.Write);
             VerifyResolvedBindings(functionMetadata, inputBindings, outputBindings);
 
             BindingMetadata triggerMetadata = functionMetadata.InputBindings.FirstOrDefault(p => p.IsTrigger);
@@ -82,7 +85,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             if (unresolvedBindings.Any())
             {
                 string allUnresolvedBindings = string.Join(", ", unresolvedBindings);
-                throw new ScriptConfigurationException($"The binding type(s) '{allUnresolvedBindings}' are not registered. " +
+                throw new FunctionConfigurationException($"The binding type(s) '{allUnresolvedBindings}' are not registered. " +
                         $"Please ensure the type is correct and the binding extension is installed.");
             }
         }
@@ -132,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             }
             else
             {
-                throw new ScriptConfigurationException($"The binding type '{triggerMetadata.Type}' is not registered. " +
+                throw new FunctionConfigurationException($"The binding type '{triggerMetadata.Type}' is not registered. " +
                     $"Please ensure the type is correct and the binding extension is installed.");
             }
 
@@ -145,7 +148,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
             ScriptBindingContext bindingContext = new ScriptBindingContext(metadata);
             ScriptBinding binding = null;
-            foreach (var provider in this.Config.BindingProviders)
+            foreach (var provider in BindingProviders)
             {
                 if (provider.TryCreate(bindingContext, out binding))
                 {

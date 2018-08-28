@@ -16,7 +16,9 @@ using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Xunit;
+using static Microsoft.Azure.WebJobs.Script.Tests.TestFunctionHost;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
@@ -269,7 +271,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             public TestFixture()
             {
-                HostSettings = new WebHostSettings
+                HostOptions = new ScriptApplicationHostOptions
                 {
                     IsSelfHost = true,
                     ScriptPath = Path.Combine(Environment.CurrentDirectory, @"..\..\..\TestScripts\Proxies"),
@@ -277,16 +279,20 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     SecretsPath = Path.Combine(Path.GetTempPath(), @"ProxyTests\Secrets")
                 };
 
-               _testServer = new TestServer(
+                var factory = new TestOptionsFactory<ScriptApplicationHostOptions>(HostOptions);
+                var optionsMonitor = new OptionsMonitor<ScriptApplicationHostOptions>(factory, Array.Empty<IOptionsChangeTokenSource<ScriptApplicationHostOptions>>(), factory);
+
+                _testServer = new TestServer(
                AspNetCore.WebHost.CreateDefaultBuilder()
                .UseStartup<Startup>()
                .ConfigureServices(services =>
                {
-                   services.Replace(new ServiceDescriptor(typeof(WebHostSettings), HostSettings));
+                   services.Replace(new ServiceDescriptor(typeof(IOptions<ScriptApplicationHostOptions>), new OptionsWrapper<ScriptApplicationHostOptions>(HostOptions)));
                    services.Replace(new ServiceDescriptor(typeof(ISecretManager), new TestSecretManager()));
+                   services.Replace(new ServiceDescriptor(typeof(IOptionsMonitor<ScriptApplicationHostOptions>), optionsMonitor));
                }));
 
-                var scriptConfig = _testServer.Host.Services.GetService<WebHostResolver>().GetScriptHostConfiguration(HostSettings);
+                var scriptConfig = _testServer.Host.Services.GetService<IOptions<ScriptJobHostOptions>>().Value;
 
                 HttpClient = _testServer.CreateClient();
                 HttpClient.BaseAddress = new Uri("https://localhost/");
@@ -294,7 +300,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 TestHelpers.WaitForWebHost(HttpClient);
             }
 
-            public WebHostSettings HostSettings { get; private set; }
+            public ScriptApplicationHostOptions HostOptions { get; private set; }
 
             public HttpClient HttpClient { get; set; }
 

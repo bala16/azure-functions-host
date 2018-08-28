@@ -16,8 +16,11 @@ using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.WebHost.Controllers;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.WebJobs.Script.Tests;
 using Moq;
 using WebJobs.Script.Tests;
 using Xunit;
@@ -26,55 +29,31 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 {
     public class AdminControllerTests : IDisposable
     {
-        private readonly ScriptSettingsManager _settingsManager;
         private readonly TempDirectory _secretsDirectory = new TempDirectory();
-        private Mock<ScriptHost> hostMock;
-        private Mock<WebScriptHostManager> managerMock;
-        private Collection<FunctionDescriptor> testFunctions;
-        private FunctionsController testController;
-        private Mock<ISecretManager> secretsManagerMock;
-
-        public AdminControllerTests()
-        {
-            _settingsManager = ScriptSettingsManager.Instance;
-            testFunctions = new Collection<FunctionDescriptor>();
-
-            var config = new ScriptHostConfiguration();
-            var environment = new NullScriptHostEnvironment();
-            var eventManager = new Mock<IScriptEventManager>();
-            var mockRouter = new Mock<IWebJobsRouter>();
-            var mockWebFunctionManager = new Mock<IWebFunctionsManager>();
-            hostMock = new Mock<ScriptHost>(MockBehavior.Strict, new object[] { environment, eventManager.Object, config, null, null, null });
-            hostMock.Setup(p => p.Functions).Returns(testFunctions);
-
-            WebHostSettings settings = new WebHostSettings();
-            settings.SecretsPath = _secretsDirectory.Path;
-            secretsManagerMock = new Mock<ISecretManager>(MockBehavior.Strict);
-            managerMock = new Mock<WebScriptHostManager>(MockBehavior.Strict, new object[] { config, new TestSecretManagerFactory(secretsManagerMock.Object), eventManager.Object, _settingsManager, settings, mockRouter.Object, NullLoggerFactory.Instance });
-            managerMock.SetupGet(p => p.Instance).Returns(hostMock.Object);
-
-            testController = new FunctionsController(mockWebFunctionManager.Object, managerMock.Object, mockRouter.Object, new LoggerFactory());
-        }
 
         [Fact]
         public async Task Invoke_CallsFunction()
         {
+            var testFunctions = new Collection<FunctionDescriptor>();
             string testFunctionName = "TestFunction";
             string triggerParameterName = "testTrigger";
             string testInput = Guid.NewGuid().ToString();
             bool functionInvoked = false;
 
-            hostMock.Setup(p => p.CallAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), CancellationToken.None))
-                .Callback<string, Dictionary<string, object>, CancellationToken>((name, args, token) =>
-                {
-                    // verify the correct arguments were passed to the invoke
-                    Assert.Equal(testFunctionName, name);
-                    Assert.Equal(1, args.Count);
-                    Assert.Equal(testInput, (string)args[triggerParameterName]);
+            var scriptHostMock = new Mock<IScriptJobHost>();
+            scriptHostMock.Setup(p => p.CallAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), CancellationToken.None))
+            .Callback<string, IDictionary<string, object>, CancellationToken>((name, args, token) =>
+            {
+                // verify the correct arguments were passed to the invoke
+                Assert.Equal(testFunctionName, name);
+                Assert.Equal(1, args.Count);
+                Assert.Equal(testInput, (string)args[triggerParameterName]);
 
-                    functionInvoked = true;
-                })
-                .Returns(Task.CompletedTask);
+                functionInvoked = true;
+            })
+            .Returns(Task.CompletedTask);
+
+            scriptHostMock.Setup(p => p.Functions).Returns(testFunctions);
 
             // Add a few parameters, with the trigger parameter last
             // to verify parameter order handling
@@ -93,7 +72,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             {
                 Input = testInput
             };
-            IActionResult response = testController.Invoke(testFunctionName, invocation);
+
+            var functionsManagerMock = new Mock<IWebFunctionsManager>();
+            var mockRouter = new Mock<IWebJobsRouter>();
+            var testController = new FunctionsController(functionsManagerMock.Object, mockRouter.Object, new LoggerFactory());
+            IActionResult response = testController.Invoke(testFunctionName, invocation, scriptHostMock.Object);
             Assert.IsType<AcceptedResult>(response);
 
             // The call is fire-and-forget, so watch for functionInvoked to be set.
@@ -112,7 +95,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
         }
     }

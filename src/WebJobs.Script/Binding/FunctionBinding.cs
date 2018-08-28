@@ -20,11 +20,11 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
 {
     public abstract class FunctionBinding
     {
-        private readonly ScriptHostConfiguration _config;
+        private readonly ScriptJobHostOptions _options;
 
-        protected FunctionBinding(ScriptHostConfiguration config, BindingMetadata metadata, FileAccess access)
+        protected FunctionBinding(ScriptJobHostOptions options, BindingMetadata metadata, FileAccess access)
         {
-            _config = config;
+            _options = options;
             Access = access;
             Metadata = metadata;
         }
@@ -37,7 +37,8 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
 
         public abstract Collection<CustomAttributeBuilder> GetCustomAttributes(Type parameterType);
 
-        internal static Collection<FunctionBinding> GetBindings(ScriptHostConfiguration config, IEnumerable<BindingMetadata> bindingMetadataCollection, FileAccess fileAccess)
+        internal static Collection<FunctionBinding> GetBindings(ScriptJobHostOptions config, IEnumerable<IScriptBindingProvider> bindingProviders,
+            IEnumerable<BindingMetadata> bindingMetadataCollection, FileAccess fileAccess)
         {
             Collection<FunctionBinding> bindings = new Collection<FunctionBinding>();
 
@@ -57,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
                             break;
                         default:
                             FunctionBinding binding = null;
-                            if (TryParseFunctionBinding(config, bindingMetadata.Raw, out binding))
+                            if (TryParseFunctionBinding(config, bindingProviders, bindingMetadata.Raw, out binding))
                             {
                                 bindings.Add(binding);
                             }
@@ -69,13 +70,13 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
             return bindings;
         }
 
-        private static bool TryParseFunctionBinding(ScriptHostConfiguration config, JObject metadata, out FunctionBinding functionBinding)
+        private static bool TryParseFunctionBinding(ScriptJobHostOptions config, IEnumerable<IScriptBindingProvider> bindingProviders, JObject metadata, out FunctionBinding functionBinding)
         {
             functionBinding = null;
 
             ScriptBindingContext bindingContext = new ScriptBindingContext(metadata);
             ScriptBinding scriptBinding = null;
-            foreach (var provider in config.BindingProviders)
+            foreach (var provider in bindingProviders)
             {
                 if (provider.TryCreate(bindingContext, out scriptBinding))
                 {
@@ -92,16 +93,6 @@ namespace Microsoft.Azure.WebJobs.Script.Binding
             functionBinding = new ExtensionBinding(config, scriptBinding, bindingMetadata);
 
             return true;
-        }
-
-        protected string Resolve(string name)
-        {
-            if (_config.HostConfig.NameResolver == null)
-            {
-                return name;
-            }
-
-            return _config.HostConfig.NameResolver.ResolveWholeString(name);
         }
 
         internal static IEnumerable ReadAsEnumerable(object value)

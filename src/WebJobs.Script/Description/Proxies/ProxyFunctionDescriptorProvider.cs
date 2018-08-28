@@ -4,22 +4,23 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Azure.AppService.Proxy.Client;
 using Microsoft.Azure.WebJobs.Script.Binding;
+using Microsoft.Azure.WebJobs.Script.Extensibility;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
     internal sealed class ProxyFunctionDescriptorProvider : FunctionDescriptorProvider
     {
+        private readonly ILoggerFactory _loggerFactory;
         private ProxyClientExecutor _proxyClient;
 
-        public ProxyFunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config, ProxyClientExecutor proxyClient)
-            : base(host, config)
+        public ProxyFunctionDescriptorProvider(ScriptHost host, ScriptJobHostOptions config, ICollection<IScriptBindingProvider> bindingProviders,
+            ProxyClientExecutor proxyClient, ILoggerFactory loggerFactory)
+            : base(host, config, bindingProviders)
         {
             _proxyClient = proxyClient;
+            _loggerFactory = loggerFactory;
         }
 
         public override bool TryCreate(FunctionMetadata functionMetadata, out FunctionDescriptor functionDescriptor)
@@ -41,7 +42,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         protected override IFunctionInvoker CreateFunctionInvoker(string scriptFilePath, BindingMetadata triggerMetadata, FunctionMetadata functionMetadata, Collection<FunctionBinding> inputBindings, Collection<FunctionBinding> outputBindings)
         {
-            return new ProxyFunctionInvoker(Host, functionMetadata, _proxyClient);
+            return new ProxyFunctionInvoker(Host, functionMetadata, _proxyClient, _loggerFactory);
         }
     }
 }

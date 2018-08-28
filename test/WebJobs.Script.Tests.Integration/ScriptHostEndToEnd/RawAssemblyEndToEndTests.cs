@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Azure.WebJobs.Script.Rpc;
 using Microsoft.Azure.WebJobs.Script.Tests.Integration.Properties;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -62,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         public void AssemblyChange_TriggersEnvironmentShutdown()
         {
             var manualResetEvent = new ManualResetEvent(false);
-            _fixture.ScriptHostEnvironmentMock.Setup(e => e.Shutdown())
+            _fixture.ScriptJobHostEnvironmentMock.Setup(e => e.Shutdown())
                 .Callback(() => manualResetEvent.Set());
 
             string sourceFile = TestFixture.SharedAssemblyPath;
@@ -100,17 +101,17 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 CreateFunctionAssembly();
             }
 
-            public TestFixture() : base(ScriptRoot, "dotnet")
+            public TestFixture() : base(ScriptRoot, "dotnet", LanguageWorkerConstants.DotNetLanguageWorkerName)
             {
             }
 
             public static string SharedAssemblyPath => Path.Combine(FunctionSharedBinPath, "DotNetFunctionSharedAssembly.dll");
 
-            public override void Dispose()
+            public override async Task DisposeAsync()
             {
-                base.Dispose();
+                await base.DisposeAsync();
 
-                Task.WaitAll(
+                await Task.WhenAll(
                     FileUtility.DeleteDirectoryAsync(Function1Path, true),
                     FileUtility.DeleteDirectoryAsync(Function2Path, true),
                     FileUtility.DeleteDirectoryAsync(Function3Path, true),

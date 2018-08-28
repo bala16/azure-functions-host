@@ -6,15 +6,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Script.Config;
-using Microsoft.Azure.WebJobs.Script.Eventing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.WebJobs.Script.Tests;
-using Moq;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
@@ -22,13 +21,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
     public class EndToEndTimeoutTests
     {
         private static readonly ScriptSettingsManager SettingsManager = ScriptSettingsManager.Instance;
-        private ILoggerFactory _loggerFactory = new LoggerFactory();
         private TestLoggerProvider _loggerProvider = new TestLoggerProvider();
-
-        public EndToEndTimeoutTests()
-        {
-            _loggerFactory.AddProvider(_loggerProvider);
-        }
 
         [Fact]
         public async Task TimeoutTest_SyncFunction_CSharp()
@@ -70,16 +63,19 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
         {
             string functionName = "TimeoutToken";
             TestHelpers.ClearFunctionLogs(functionName);
-            using (var manager = await CreateAndStartScriptHostManager("CSharp", functionName, TimeSpan.FromSeconds(3)))
+            IHostBuilder builder = CreateTimeoutHostBuilder(@"TestScripts\CSharp", TimeSpan.FromSeconds(3), functionName);
+            using (var host = builder.Build())
             {
+                await host.StartAsync();
+                var scriptHost = host.GetScriptHost();
                 Dictionary<string, object> arguments = new Dictionary<string, object>
                 {
                     { "input", scenario },
                 };
 
-                FunctionTimeoutException ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => manager.Instance.CallAsync(functionName, arguments));
+                FunctionTimeoutException ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => scriptHost.CallAsync(functionName, arguments));
 
-                var exception = GetExceptionHandler(manager).TimeoutExceptionInfos.Single().SourceException;
+                var exception = GetExceptionHandler(host).TimeoutExceptionInfos.Single().SourceException;
                 Assert.IsType<FunctionTimeoutException>(exception);
 
                 verify(_loggerProvider.GetAllLogMessages().Where(t => t.FormattedMessage != null).Select(t => t.FormattedMessage));
@@ -90,8 +86,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
         {
             TestHelpers.ClearFunctionLogs(functionName);
             TimeSpan testTimeout = TimeSpan.FromSeconds(3);
-            using (var manager = await CreateAndStartScriptHostManager(scriptLang, functionName, testTimeout))
+            IHostBuilder builder = CreateTimeoutHostBuilder($@"TestScripts\{scriptLang}", TimeSpan.FromSeconds(3), functionName);
+            using (var host = builder.Build())
             {
+                await host.StartAsync();
+                ScriptHost scriptHost = host.GetScriptHost();
                 string testData = Guid.NewGuid().ToString();
 
                 Dictionary<string, object> arguments = new Dictionary<string, object>
@@ -99,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
                     { "inputData", testData },
                 };
 
-                FunctionTimeoutException ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => manager.Instance.CallAsync(functionName, arguments));
+                FunctionTimeoutException ex = await Assert.ThrowsAsync<FunctionTimeoutException>(() => scriptHost.CallAsync(functionName, arguments));
 
                 await TestHelpers.Await(() =>
                 {
@@ -111,34 +110,39 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
                     return traces.Contains(expectedMessage);
                 });
 
-                var exception = GetExceptionHandler(manager).TimeoutExceptionInfos.Single().SourceException;
+                var exception = GetExceptionHandler(host).TimeoutExceptionInfos.Single().SourceException;
                 Assert.IsType<FunctionTimeoutException>(exception);
             }
         }
 
-        private MockExceptionHandler GetExceptionHandler(ScriptHostManager manager)
+        private IHostBuilder CreateTimeoutHostBuilder(string scriptPath, TimeSpan timeout, string functionName)
         {
-            return manager.Instance.ScriptConfig.HostConfig.GetService<IWebJobsExceptionHandler>() as MockExceptionHandler;
+            var builder = new HostBuilder()
+               .ConfigureDefaultTestWebScriptHost(b =>
+               {
+                   b.Services.Configure<ScriptJobHostOptions>(o =>
+                   {
+                       o.FunctionTimeout = timeout;
+                       o.Functions = new List<string> { functionName };
+                   });
+
+                   b.Services.AddSingleton<IWebJobsExceptionHandler, MockExceptionHandler>();
+               },
+               options =>
+               {
+                   options.ScriptPath = scriptPath;
+               }, runStartupHostedServices: true)
+               .ConfigureLogging(b =>
+               {
+                   b.AddProvider(_loggerProvider);
+               });
+
+            return builder;
         }
 
-        private async Task<MockScriptHostManager> CreateAndStartScriptHostManager(string scriptLang, string functionName, TimeSpan timeout)
+        private MockExceptionHandler GetExceptionHandler(IHost host)
         {
-            var functions = new Collection<string>();
-            functions.Add(functionName);
-
-            ScriptHostConfiguration config = new ScriptHostConfiguration()
-            {
-                RootScriptPath = $@"TestScripts\{scriptLang}",
-                FileLoggingMode = FileLoggingMode.Always,
-                Functions = functions,
-                FunctionTimeout = timeout
-            };
-
-            var scriptHostManager = new MockScriptHostManager(config, new TestLoggerProviderFactory(_loggerProvider));
-            ThreadPool.QueueUserWorkItem((s) => scriptHostManager.RunAndBlock());
-            await TestHelpers.Await(() => scriptHostManager.State == ScriptHostState.Running);
-
-            return scriptHostManager;
+            return host.Services.GetService<IWebJobsExceptionHandler>() as MockExceptionHandler;
         }
 
         private class MockExceptionHandler : IWebJobsExceptionHandler
@@ -161,25 +165,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.EndToEnd
             {
                 UnhandledExceptionInfos.Add(exceptionInfo);
                 return Task.CompletedTask;
-            }
-        }
-
-        private class MockScriptHostManager : ScriptHostManager
-        {
-            public MockScriptHostManager(ScriptHostConfiguration config, ILoggerProviderFactory loggerProviderFactory)
-                : base(config, new Mock<IScriptEventManager>().Object, loggerProviderFactory: loggerProviderFactory)
-            {
-            }
-
-            public MockScriptHostManager(ScriptHostConfiguration config, IScriptEventManager eventManager)
-                : base(config, eventManager)
-            {
-            }
-
-            protected override void OnInitializeConfig(ScriptHostConfiguration config)
-            {
-                base.OnInitializeConfig(config);
-                config.HostConfig.AddService<IWebJobsExceptionHandler>(new MockExceptionHandler());
             }
         }
     }

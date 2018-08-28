@@ -11,6 +11,11 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Binding;
 using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Extensibility;
+using Microsoft.Azure.WebJobs.Script.WebHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.WebJobs.Script.Tests;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
@@ -19,14 +24,54 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
     // not have a direct dependency on anything WebJobs related.
     public static partial class TestHelpers
     {
+        public static IHost GetDefaultHost(Action<ScriptApplicationHostOptions> configure = null)
+        {
+            if (configure == null)
+            {
+                configure = o =>
+                {
+                    o.ScriptPath = TestHelpers.FunctionsTestDirectory;
+                    o.LogPath = TestHelpers.GetHostLogFileDirectory().FullName;
+                };
+            }
+
+            return new HostBuilder()
+                .ConfigureDefaultTestWebScriptHost(configure)
+                .Build();
+        }
+
+        public static ScriptHost GetDefaultScriptHost(Action<ScriptApplicationHostOptions> configure = null)
+        {
+            return GetDefaultHost(configure)
+                .GetScriptHost();
+        }
+
+        public static FunctionBinding CreateBindingFromHost(IHost host, JObject json)
+        {
+            var bindingProviders = host.Services.GetServices<IScriptBindingProvider>();
+            var context = new ScriptBindingContext(json);
+
+            ScriptBinding scriptBinding = null;
+            bindingProviders.FirstOrDefault(p => p.TryCreate(context, out scriptBinding));
+
+            if (scriptBinding != null)
+            {
+                BindingMetadata bindingMetadata = BindingMetadata.Create(json);
+                var config = new ScriptJobHostOptions();
+                return new ExtensionBinding(config, scriptBinding, bindingMetadata);
+            }
+
+            return null;
+        }
+
         public static FunctionBinding CreateTestBinding(JObject json)
         {
             ScriptBindingContext context = new ScriptBindingContext(json);
-            WebJobsCoreScriptBindingProvider provider = new WebJobsCoreScriptBindingProvider(new JobHostConfiguration(), new JObject(), null);
+            WebJobsCoreScriptBindingProvider provider = new WebJobsCoreScriptBindingProvider(NullLogger<WebJobsCoreScriptBindingProvider>.Instance);
             ScriptBinding scriptBinding = null;
             provider.TryCreate(context, out scriptBinding);
             BindingMetadata bindingMetadata = BindingMetadata.Create(json);
-            ScriptHostConfiguration config = new ScriptHostConfiguration();
+            var config = new ScriptJobHostOptions();
             return new ExtensionBinding(config, scriptBinding, bindingMetadata);
         }
 

@@ -3,20 +3,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Management.Models;
+using Microsoft.Azure.WebJobs.Script.Rpc;
 using Microsoft.Azure.WebJobs.Script.WebHost.Extensions;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -30,15 +30,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private const string DurableTaskStorageConnectionName = "azureStorageConnectionStringName";
         private const string DurableTask = "durableTask";
 
-        private readonly ScriptHostConfiguration _config;
+        private readonly ScriptJobHostOptions _config;
         private readonly ILogger _logger;
         private readonly HttpClient _client;
+        private readonly IEnumerable<WorkerConfig> _workerConfigs;
 
-        public WebFunctionsManager(WebHostSettings webSettings, ILoggerFactory loggerFactory, HttpClient client)
+        public WebFunctionsManager(IOptions<ScriptApplicationHostOptions> webSettings, IOptions<LanguageWorkerOptions> workerConfigOptions, ILoggerFactory loggerFactory, HttpClient client)
         {
-            _config = WebHostResolver.CreateScriptHostConfiguration(webSettings);
+            _config = webSettings.Value.ToScriptHostConfiguration();
             _logger = loggerFactory?.CreateLogger(ScriptConstants.LogCategoryKeysController);
             _client = client;
+            _workerConfigs = workerConfigOptions.Value.WorkerConfigs;
         }
 
         /// <summary>
@@ -133,8 +135,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         /// <returns>(success, FunctionMetadataResponse)</returns>
         public async Task<(bool, FunctionMetadataResponse)> TryGetFunction(string name, HttpRequest request, IWebJobsRouter router = null)
         {
-            var functionMetadata = ScriptHost.ReadFunctionMetadata(Path.Combine(_config.RootScriptPath, name), new Dictionary<string, Collection<string>>(), fileSystem: FileUtility.Instance);
-
+            // TODO: DI (FACAVAL) Follow up with ahmels - Since loading of function metadata is no longer tied to the script host, we
+            // should be able to inject an IFunctionMedatadaManager here and bypass this step.
+            var functionMetadata = FunctionMetadataManager.ReadFunctionMetadata(Path.Combine(_config.RootScriptPath, name), null, _workerConfigs, new Dictionary<string, ICollection<string>>(), fileSystem: FileUtility.Instance);
             if (functionMetadata != null)
             {
                 return (true, await functionMetadata.ToFunctionMetadataResponse(request, _config, router));
@@ -245,10 +248,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
         }
 
-        private IEnumerable<FunctionMetadata> GetFunctionsMetadata()
+        internal IEnumerable<FunctionMetadata> GetFunctionsMetadata()
         {
-            return ScriptHost
-                .ReadFunctionsMetadata(FileUtility.EnumerateDirectories(_config.RootScriptPath), _logger, new Dictionary<string, Collection<string>>(), fileSystem: FileUtility.Instance);
+            return FunctionMetadataManager
+                .ReadFunctionsMetadata(FileUtility.EnumerateDirectories(_config.RootScriptPath), null, _workerConfigs, _logger, fileSystem: FileUtility.Instance);
         }
 
         private async Task<Dictionary<string, string>> ReadDurableTaskConfig()
