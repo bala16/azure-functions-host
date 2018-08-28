@@ -86,6 +86,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 {
                     return new LinuxContainerEventGenerator();
                 }
+                else if (SystemEnvironment.Instance.IsLinuxAppServiceEnvironment())
+                {
+                    return new LinuxAppServiceEventGenerator(new LinuxAppServiceFileLoggerFactory(new LinuxAppServiceFileSystem()));
+                }
                 else
                 {
                     return new EtwEventGenerator();
