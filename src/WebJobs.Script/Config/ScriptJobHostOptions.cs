@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Script
                     }
                     catch (DirectoryNotFoundException)
                     {
-                        _directorySnapshot = default;
+                        _directorySnapshot = ImmutableArray<string>.Empty;
                     }
                 }
 
