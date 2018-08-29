@@ -268,7 +268,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Rpc
 
                 var scriptHostOptions = new ScriptJobHostOptions();
                 var scriptSettingsManager = new ScriptSettingsManager(config);
-                var configFactory = new WorkerConfigFactory(config, testLogger);
+                var configFactory = new WorkerConfigFactory(config, testLogger, null);
                 if (appSvcEnv)
                 {
                     var testEnvVariables = new Dictionary<string, string>

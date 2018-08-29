@@ -10,18 +10,20 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
 {
     internal class LanguageWorkerOptionsSetup : IConfigureOptions<LanguageWorkerOptions>
     {
+        private readonly ILoggerFactory _loggerFactory;
         private IConfiguration _configuration;
         private ILogger _logger;
 
         public LanguageWorkerOptionsSetup(IConfiguration configuration, ILoggerFactory loggerFactory)
         {
             _configuration = configuration;
+            _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger("Host.LanguageWorkerConfigOptionsSetup");
         }
 
         public void Configure(LanguageWorkerOptions options)
         {
-            var configFactory = new WorkerConfigFactory(_configuration, _logger);
+            var configFactory = new WorkerConfigFactory(_configuration, _logger, _loggerFactory);
             options.WorkerConfigs = configFactory.GetConfigs();
         }
     }

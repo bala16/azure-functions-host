@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.Azure.AppService.Proxy.Runtime.Configuration.Models;
 using Microsoft.Azure.WebJobs.Script.Abstractions;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Extensions.Configuration;
@@ -22,10 +23,10 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
         private readonly ILogger _logger;
         private Dictionary<string, IWorkerProvider> _workerProviderDictionary = new Dictionary<string, IWorkerProvider>();
 
-        public WorkerConfigFactory(IConfiguration config, ILogger logger)
+        public WorkerConfigFactory(IConfiguration config, ILogger logger, ILoggerFactory loggerFactory)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
             WorkersDirPath = Path.Combine(Path.GetDirectoryName(new Uri(typeof(WorkerConfigFactory).Assembly.CodeBase).LocalPath), LanguageWorkerConstants.DefaultWorkersDirectoryName);
             var workersDirectorySection = _config.GetSection($"{LanguageWorkerConstants.LanguageWorkersSectionName}:{LanguageWorkerConstants.WorkersDirectorySectionName}");
             if (!string.IsNullOrEmpty(workersDirectorySection.Value))
@@ -91,6 +92,7 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
             foreach (var workerDir in Directory.EnumerateDirectories(WorkersDirPath))
             {
                 string workerConfigPath = Path.Combine(workerDir, LanguageWorkerConstants.WorkerConfigFileName);
+                _logger.LogInformation(">>> workerConfigPath " + workerConfigPath + " workerDir " + workerDir);
                 if (File.Exists(workerConfigPath))
                 {
                     AddProvider(workerDir);
@@ -116,16 +118,39 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
         {
             try
             {
+                _logger.LogInformation(">>> " + workerDir);
                 Dictionary<string, WorkerDescription> descriptionProfiles = new Dictionary<string, WorkerDescription>();
                 string workerConfigPath = Path.Combine(workerDir, LanguageWorkerConstants.WorkerConfigFileName);
                 if (!File.Exists(workerConfigPath))
                 {
+                    _logger.LogInformation($"Did not find worker config file at: {workerConfigPath}");
                     _logger.LogTrace($"Did not find worker config file at: {workerConfigPath}");
                     return;
                 }
+                _logger.LogInformation($"Found worker config: {workerConfigPath}");
                 _logger.LogTrace($"Found worker config: {workerConfigPath}");
+
+                if (workerConfigPath.Contains("python"))
+                {
+                    _logger.LogInformation(">>>>>>>>> Skipping python");
+                    return;
+                }
+
                 string json = File.ReadAllText(workerConfigPath);
+
+                _logger.LogInformation($"json {json}");
+
                 JObject workerConfig = JObject.Parse(json);
+
+                if (workerConfig != null)
+                {
+                    _logger.LogInformation("workerConfig " + workerConfig);
+                }
+                else
+                {
+                    _logger.LogInformation("workerConfig == null");
+                }
+
                 WorkerDescription workerDescription = workerConfig.Property(LanguageWorkerConstants.WorkerDescription).Value.ToObject<WorkerDescription>();
                 workerDescription.WorkerDirectory = workerDir;
                 var languageSection = _config.GetSection($"{LanguageWorkerConstants.LanguageWorkersSectionName}:{workerDescription.Language}");
