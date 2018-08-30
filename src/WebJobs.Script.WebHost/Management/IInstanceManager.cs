@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 {
@@ -13,6 +14,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         Task<string> ValidateContext(HostAssignmentContext assignmentContext);
 
-        bool StartAssignment(HostAssignmentContext assignmentContext);
+        bool StartAssignment(HostAssignmentContext assignmentContext, ILogger logger);
     }
 }

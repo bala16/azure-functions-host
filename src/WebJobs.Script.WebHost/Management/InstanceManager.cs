@@ -43,10 +43,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _logger = loggerFactory.CreateLogger(LogCategories.Startup);
         }
 
-        public bool StartAssignment(HostAssignmentContext context)
+        public bool StartAssignment(HostAssignmentContext context, ILogger logger)
         {
             if (!_webHostEnvironment.InStandbyMode)
             {
+                logger?.LogInformation("Assign called while host is not in placeholder mode");
                 _logger.LogError("Assign called while host is not in placeholder mode");
                 return false;
             }
@@ -57,6 +58,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 {
                     if (_assignmentContext != null)
                     {
+                        logger?.LogInformation("already assigned");
                         return _assignmentContext.Equals(context);
                     }
                     _assignmentContext = context;
@@ -64,7 +66,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                 // start the specialization process in the background
                 _logger.LogInformation("Starting Assignment");
-                Task.Run(async () => await Assign(context));
+                logger?.LogInformation("Starting Assignment");
+                Task.Run(async () => await Assign(context, logger));
 
                 return true;
             }
@@ -96,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return null;
         }
 
-        private async Task Assign(HostAssignmentContext assignmentContext)
+        private async Task Assign(HostAssignmentContext assignmentContext, ILogger logger)
         {
             try
             {
@@ -108,13 +111,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 // will be delayed until complete
                 _webHostEnvironment.DelayRequests();
 
+                logger?.LogInformation("Start ApplyContext");
+
                 // first make all environment and file system changes required for
                 // the host to be specialized
-                await ApplyContext(assignmentContext);
+                await ApplyContext(assignmentContext, logger);
+
+                logger?.LogInformation("End ApplyContext");
 
                 // all assignment settings/files have been applied so we can flip
                 // the switch now on specialization
                 _logger.LogInformation("Triggering specialization");
+
                 _webHostEnvironment.FlagAsSpecializedAndReady();
             }
             catch (Exception ex)
@@ -128,9 +136,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
         }
 
-        private async Task ApplyContext(HostAssignmentContext assignmentContext)
+        private async Task ApplyContext(HostAssignmentContext assignmentContext, ILogger logger)
         {
             _logger.LogInformation($"Applying {assignmentContext.Environment.Count} app setting(s)");
+            logger?.LogInformation($"Applying {assignmentContext.Environment.Count} app setting(s)");
             assignmentContext.ApplyAppSettings();
 
             if (!string.IsNullOrEmpty(assignmentContext.ZipUrl))
@@ -141,8 +150,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 await DownloadAsync(zipUri, filePath);
 
                 _logger.LogInformation($"Extracting files to '{_webHostSettings.ScriptPath}'");
+                logger?.LogInformation($"Extracting files to '{_webHostSettings.ScriptPath}'");
                 ZipFile.ExtractToDirectory(filePath, _webHostSettings.ScriptPath, overwriteFiles: true);
                 _logger.LogInformation($"Zip extraction complete");
+                logger?.LogInformation($"Zip extraction complete");
             }
         }
 

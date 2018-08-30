@@ -60,7 +60,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
                     { envValue.Name, envValue.Value }
                 }
             };
-            bool result = _instanceManager.StartAssignment(context);
+            bool result = _instanceManager.StartAssignment(context, null);
             Assert.True(result);
             Assert.True(_scriptWebEnvironment.InStandbyMode);
 
@@ -80,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             // calling again should return false, since we're no longer
             // in placeholder mode
             _loggerProvider.ClearAllLogMessages();
-            result = _instanceManager.StartAssignment(context);
+            result = _instanceManager.StartAssignment(context, null);
             Assert.False(result);
 
             logs = _loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             Assert.False(SystemEnvironment.Instance.IsPlaceholderModeEnabled());
 
             var context = new HostAssignmentContext();
-            bool result = _instanceManager.StartAssignment(context);
+            bool result = _instanceManager.StartAssignment(context, null);
             Assert.False(result);
         }
 

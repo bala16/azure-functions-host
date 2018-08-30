@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -21,11 +22,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
     {
         private readonly ScriptSettingsManager _settingsManager;
         private readonly IInstanceManager _instanceManager;
+        private readonly ILogger _logger;
 
-        public InstanceController(ScriptSettingsManager settingsManager, IInstanceManager instanceManager)
+        public InstanceController(ScriptSettingsManager settingsManager, IInstanceManager instanceManager, ILoggerFactory loggerFactory)
         {
             _settingsManager = settingsManager;
             _instanceManager = instanceManager;
+            _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
         }
 
         [HttpPost]
@@ -33,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> Assign([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
         {
+            _logger.LogInformation("Starting Assign");
             var containerKey = _settingsManager.GetSetting(EnvironmentSettingNames.ContainerEncryptionKey);
             var assignmentContext = encryptedAssignmentContext.Decrypt(containerKey);
 
@@ -44,7 +48,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 return StatusCode(StatusCodes.Status400BadRequest, error);
             }
 
-            var result = _instanceManager.StartAssignment(assignmentContext);
+            var result = _instanceManager.StartAssignment(assignmentContext, _logger);
+
+            _logger.LogInformation("Assign Result " + result);
 
             return result
                 ? Accepted()
