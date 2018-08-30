@@ -123,18 +123,17 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
                 string workerConfigPath = Path.Combine(workerDir, LanguageWorkerConstants.WorkerConfigFileName);
                 if (!File.Exists(workerConfigPath))
                 {
-                    _logger.LogInformation($"Did not find worker config file at: {workerConfigPath}");
                     _logger.LogTrace($"Did not find worker config file at: {workerConfigPath}");
                     return;
                 }
                 _logger.LogInformation($"Found worker config: {workerConfigPath}");
                 _logger.LogTrace($"Found worker config: {workerConfigPath}");
 
-                if (workerConfigPath.Contains("python"))
-                {
-                    _logger.LogInformation(">>>>>>>>> Skipping python");
-                    return;
-                }
+//                if (workerConfigPath.Contains("python"))
+//                {
+//                    _logger.LogInformation(">>>>>>>>> Skipping python");
+//                    return;
+//                }
 
                 string json = File.ReadAllText(workerConfigPath);
 
