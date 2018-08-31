@@ -57,6 +57,30 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
         }
 
+        [HttpPost]
+        [Route("admin/instance/assign2")]
+//        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public async Task<IActionResult> Assign2([FromBody] HostAssignmentContext assignmentContext)
+        {
+            _logger.LogInformation("Starting Assign2");
+
+            // before starting the assignment we want to perform as much
+            // up front validation on the context as possible
+            string error = await _instanceManager.ValidateContext(assignmentContext);
+            if (error != null)
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, error);
+            }
+
+            var result = _instanceManager.StartAssignment(assignmentContext, _logger);
+
+            _logger.LogInformation("Assign Result " + result);
+
+            return result
+                ? Accepted()
+                : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
+        }
+
         [HttpGet]
         [Route("admin/instance/info")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]

@@ -71,7 +71,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 _logger.LogInformation(e.Message);
             }
 
-            return NoContent();
+            return Ok("ListFunctions");
         }
 
         [HttpGet]
