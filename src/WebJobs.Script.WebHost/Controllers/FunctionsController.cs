@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.IO.Compression;
@@ -48,10 +49,29 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 //        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> List()
         {
-            _logger.LogInformation("Invoke admin/functions");
-            var functionsMetadata = await _functionsManager.GetFunctionsMetadata(Request, _webJobsRouter);
-            _logger.LogInformation("functionsMetadata.Count() " + functionsMetadata.Count());
-            return Ok(functionsMetadata);
+            try
+            {
+                _logger.LogInformation("Invoke admin/functions");
+
+                if (_functionsManager == null)
+                {
+                    _logger.LogInformation("_functionsManager == null");
+                }
+                else
+                {
+                    _logger.LogInformation("_functionsManager != null");
+                }
+
+                var functionsMetadata = await _functionsManager.GetFunctionsMetadata(Request, _webJobsRouter);
+                _logger.LogInformation("functionsMetadata.Count() " + functionsMetadata.Count());
+                return Ok(functionsMetadata);
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation(e.Message);
+            }
+
+            return NoContent();
         }
 
         [HttpGet]
