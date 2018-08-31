@@ -50,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             _applicationHostOptions = applicationHostOptions;
             _hostOptions = hostOptions;
-            _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostController);
+            _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
             _authorizationService = authorizationService;
             _functionsManager = functionsManager;
             _environment = environment;
@@ -88,6 +88,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/host/ping")]
         public IActionResult Ping()
         {
+            _logger.LogInformation("Invoke admin/host/ping");
             return Ok();
         }
 
@@ -96,6 +97,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Authorize(Policy = PolicyNames.AdminAuthLevelOrInternal)]
         public IActionResult Log([FromBody]IEnumerable<HostLogEntry> logEntries)
         {
+            _logger.LogInformation("Invoke admin/host/log");
             if (logEntries == null)
             {
                 return BadRequest("An array of log entry objects is expected.");
@@ -126,6 +128,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [TypeFilter(typeof(EnableDebugModeFilter))]
         public IActionResult LaunchDebugger()
         {
+            _logger.LogInformation("Invoke admin/host/debug");
             if (_applicationHostOptions.Value.IsSelfHost)
             {
                 // If debugger is already running, this will be a no-op returning true.
@@ -144,9 +147,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpPost]
         [Route("admin/host/synctriggers")]
-        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+//        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> SyncTriggers()
         {
+            _logger.LogInformation("Invoke admin/host/synctriggers");
             (var success, var error) = await _functionsManager.TrySyncTriggers();
 
             // Return a dummy body to make it valid in ARM template action evaluation

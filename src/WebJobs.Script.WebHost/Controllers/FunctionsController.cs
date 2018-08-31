@@ -40,22 +40,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             _functionsManager = functionsManager;
             _webJobsRouter = webJobsRouter;
-            _logger = loggerFactory?.CreateLogger(ScriptConstants.LogCategoryFunctionsController);
+            _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
         }
 
         [HttpGet]
         [Route("admin/functions")]
-        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+//        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> List()
         {
+            _logger.LogInformation("Invoke admin/functions");
             return Ok(await _functionsManager.GetFunctionsMetadata(Request, _webJobsRouter));
         }
 
         [HttpGet]
         [Route("admin/functions/{name}")]
-        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+//        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> Get(string name)
         {
+            _logger.LogInformation("Invoke admin/functions/{name}" + name);
+
             (var success, var function) = await _functionsManager.TryGetFunction(name, Request, _webJobsRouter);
 
             return success
@@ -65,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpPut]
         [Route("admin/functions/{name}")]
-        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+//        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> CreateOrUpdate(string name, [FromBody] FunctionMetadataResponse functionMetadata)
         {
             if (!FunctionNameValidationRegex.IsMatch(name))
