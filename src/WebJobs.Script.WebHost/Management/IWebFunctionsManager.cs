@@ -7,12 +7,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Script.Management.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 {
     public interface IWebFunctionsManager
     {
-        Task<IEnumerable<FunctionMetadataResponse>> GetFunctionsMetadata(HttpRequest request, IWebJobsRouter router = null);
+        Task<IEnumerable<FunctionMetadataResponse>> GetFunctionsMetadata(HttpRequest request,
+            IWebJobsRouter router = null);
 
         Task<(bool, FunctionMetadataResponse)> TryGetFunction(string name, HttpRequest request, IWebJobsRouter router = null);
 
@@ -20,6 +22,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         (bool, string) TryDeleteFunction(FunctionMetadataResponse function);
 
-        Task<(bool success, string error)> TrySyncTriggers();
+        Task<(bool success, string error)> TrySyncTriggers(ILogger logger);
     }
 }

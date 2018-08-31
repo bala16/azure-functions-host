@@ -151,7 +151,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public async Task<IActionResult> SyncTriggers()
         {
             _logger.LogInformation("Invoke admin/host/synctriggers");
-            (var success, var error) = await _functionsManager.TrySyncTriggers();
+            (var success, var error) = await _functionsManager.TrySyncTriggers(_logger);
+
+            _logger.LogInformation("Invoke admin/host/synctriggers result " + success + " error " + error);
 
             // Return a dummy body to make it valid in ARM template action evaluation
             return success

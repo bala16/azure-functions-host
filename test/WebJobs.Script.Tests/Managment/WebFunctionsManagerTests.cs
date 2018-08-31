@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
                 FileUtility.Instance = fileSystem;
 
                 // Act
-                (var success, var error) = await webManager.TrySyncTriggers();
+                (var success, var error) = await webManager.TrySyncTriggers(null);
                 var content = contentBuilder.ToString();
 
                 // Assert
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
 
             using (var env = new TestScopedEnvironmentVariable(vars))
             {
-                var httpRequest = WebFunctionsManager.BuildSyncTriggersRequest();
+                var httpRequest = WebFunctionsManager.BuildSyncTriggersRequest(null);
                 Assert.Equal(syncTriggersUri, httpRequest.RequestUri.AbsoluteUri);
                 Assert.Equal(HttpMethod.Post, httpRequest.Method);
             }

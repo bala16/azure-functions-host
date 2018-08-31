@@ -49,7 +49,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public async Task<IActionResult> List()
         {
             _logger.LogInformation("Invoke admin/functions");
-            return Ok(await _functionsManager.GetFunctionsMetadata(Request, _webJobsRouter));
+            var functionsMetadata = await _functionsManager.GetFunctionsMetadata(Request, _webJobsRouter);
+            _logger.LogInformation("functionsMetadata.Count() " + functionsMetadata.Count());
+            return Ok(functionsMetadata);
         }
 
         [HttpGet]

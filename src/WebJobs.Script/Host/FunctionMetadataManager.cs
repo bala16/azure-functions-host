@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public FunctionMetadataManager(IOptions<ScriptJobHostOptions> scriptOptions, IOptions<LanguageWorkerOptions> workerConfigOptions, ILoggerFactory loggerFactory)
         {
             _scriptOptions = scriptOptions;
-            _logger = loggerFactory.CreateLogger(LogCategories.Startup);
+            _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
             _metadata = new Lazy<ImmutableArray<FunctionMetadata>>(LoadFunctionMetadata);
             _workerConfigs = workerConfigOptions.Value.WorkerConfigs;
         }

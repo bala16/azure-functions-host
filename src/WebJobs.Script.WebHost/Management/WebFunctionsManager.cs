@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         public WebFunctionsManager(IOptions<ScriptApplicationHostOptions> webSettings, IOptions<LanguageWorkerOptions> workerConfigOptions, ILoggerFactory loggerFactory, HttpClient client)
         {
             _config = webSettings.Value.ToScriptHostConfiguration();
-            _logger = loggerFactory?.CreateLogger(ScriptConstants.LogCategoryKeysController);
+            _logger = loggerFactory?.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
             _client = client;
             _workerConfigs = workerConfigOptions.Value.WorkerConfigs;
         }
@@ -48,10 +48,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         /// and maps them to FunctionMetadataResponse.
         /// </summary>
         /// <param name="request">Current HttpRequest for figuring out baseUrl</param>
+        /// <param name="router">1</param>
         /// <returns>collection of FunctionMetadataResponse</returns>
-        public async Task<IEnumerable<FunctionMetadataResponse>> GetFunctionsMetadata(HttpRequest request, IWebJobsRouter router = null)
+        public async Task<IEnumerable<FunctionMetadataResponse>> GetFunctionsMetadata(HttpRequest request,
+            IWebJobsRouter router = null)
         {
-            return await GetFunctionsMetadata().Select(fm => fm.ToFunctionMetadataResponse(request, _config, router)).WhenAll();
+            _logger.LogInformation("start GetFunctionsMetadata");
+            IEnumerable<FunctionMetadata> functionsMetadata = GetFunctionsMetadata();
+            _logger.LogInformation("functionsMetadata count = " + functionsMetadata.Count());
+            return await functionsMetadata.Select(fm => fm.ToFunctionMetadataResponse(request, _config, router)).WhenAll();
         }
 
         /// <summary>
@@ -175,8 +180,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         /// <summary>
         /// Try to perform sync triggers to the scale controller
         /// </summary>
+        /// <param name="logger">s</param>
         /// <returns>(success, error)</returns>
-        public async Task<(bool success, string error)> TrySyncTriggers()
+        public async Task<(bool success, string error)> TrySyncTriggers(ILogger logger)
         {
             var durableTaskConfig = await ReadDurableTaskConfig();
             var functionsTriggers = (await GetFunctionsMetadata()
@@ -204,16 +210,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                     return t;
                 });
 
-            if (FileUtility.FileExists(Path.Combine(_config.RootScriptPath, ScriptConstants.ProxyMetadataFileName)))
+            var combine = Path.Combine(_config.RootScriptPath, ScriptConstants.ProxyMetadataFileName);
+            if (FileUtility.FileExists(combine))
             {
+                logger.LogInformation("TrySyncTriggers combine " + combine);
                 // This is because we still need to scale function apps that are proxies only
                 functionsTriggers = functionsTriggers.Append(new JObject(new { type = "routingTrigger" }));
             }
-
-            return await InternalSyncTriggers(functionsTriggers);
+            logger.LogInformation("TrySyncTriggers call internalsynctriggers");
+            return await InternalSyncTriggers(functionsTriggers, logger);
         }
 
-        internal static HttpRequestMessage BuildSyncTriggersRequest()
+        internal static HttpRequestMessage BuildSyncTriggersRequest(ILogger logger)
         {
             var protocol = "https";
             // On private stamps with no ssl certificate use http instead.
@@ -229,12 +237,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         // This function will call POST https://{app}.azurewebsites.net/operation/settriggers with the content
         // of triggers. It'll verify app owner ship using a SWT token valid for 5 minutes. It should be plenty.
-        private async Task<(bool, string)> InternalSyncTriggers(IEnumerable<JObject> triggers)
+        private async Task<(bool, string)> InternalSyncTriggers(IEnumerable<JObject> triggers, ILogger logger)
         {
+            logger.LogInformation("start InternalSyncTriggers");
             var content = JsonConvert.SerializeObject(triggers);
+            logger.LogInformation("InternalSyncTriggers content " + content);
             var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
 
-            using (var request = BuildSyncTriggersRequest())
+            using (var request = BuildSyncTriggersRequest(logger))
             {
                 // This has to start with Mozilla because the frontEnd checks for it.
                 request.Headers.Add("User-Agent", "Mozilla/5.0");
@@ -250,8 +260,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         internal IEnumerable<FunctionMetadata> GetFunctionsMetadata()
         {
+            var enumerateDirectories = FileUtility.EnumerateDirectories(_config.RootScriptPath);
+            _logger.LogInformation("enumerateDirectories count " + enumerateDirectories.Count());
             return FunctionMetadataManager
-                .ReadFunctionsMetadata(FileUtility.EnumerateDirectories(_config.RootScriptPath), null, _workerConfigs, _logger, fileSystem: FileUtility.Instance);
+                .ReadFunctionsMetadata(enumerateDirectories, null, _workerConfigs, _logger, fileSystem: FileUtility.Instance);
         }
 
         private async Task<Dictionary<string, string>> ReadDurableTaskConfig()
