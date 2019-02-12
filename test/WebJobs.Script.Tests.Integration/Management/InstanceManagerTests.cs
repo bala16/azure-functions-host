@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             _scriptWebEnvironment = new ScriptWebHostEnvironment(_environment);
 
             var optionsFactory = new TestOptionsFactory<ScriptApplicationHostOptions>(new ScriptApplicationHostOptions());
-            _instanceManager = new InstanceManager(optionsFactory, _httpClient, _scriptWebEnvironment, _environment, loggerFactory.CreateLogger<InstanceManager>());
+            _instanceManager = new InstanceManager(optionsFactory, _httpClient, _scriptWebEnvironment, _environment, loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger());
 
             InstanceManager.Reset();
         }
@@ -141,7 +141,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             var logs = _loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
             Assert.Collection(logs,
                 p => Assert.StartsWith("Validating host assignment context (SiteId: 1234, SiteName: 'TestSite')", p),
-                p => Assert.StartsWith("Invalid zip url specified (StatusCode: NotFound)", p));
+                p => Assert.StartsWith("Invalid zip url specified (StatusCode: NotFound)", p),
+                p => Assert.Contains("404 (Not Found)", p));
         }
 
         [Fact]

@@ -521,6 +521,13 @@ namespace Microsoft.Azure.WebJobs.Script
             return false;
         }
 
+        public static string CleanUrl(string url)
+        {
+            url = url ?? string.Empty;
+            var index = url.IndexOf("&sig=", StringComparison.OrdinalIgnoreCase);
+            return index < 0 ? url : (url.Substring(0, Math.Min(index + 10, url.Length)) + "...");
+        }
+
         private class FilteredExpandoObjectConverter : ExpandoObjectConverter
         {
             public override bool CanWrite => true;
