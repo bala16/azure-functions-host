@@ -32,5 +32,6 @@ namespace Microsoft.Azure.WebJobs.Script.Diagnostics
         public const string LinuxContainerSpecializationZipExtract = "linux.container.specialization.zip.extract";
         public const string LinuxContainerSpecializationZipDownload = "linux.container.specialization.zip.download";
         public const string LinuxContainerSpecializationZipWrite = "linux.container.specialization.zip.write";
+        public const string LinuxContainerSpecializationZipHead = "linux.container.specialization.zip.head";
     }
 }

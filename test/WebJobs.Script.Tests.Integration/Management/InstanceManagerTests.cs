@@ -136,11 +136,13 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             };
 
             string error = await _instanceManager.ValidateContext(assignmentContext);
-            Assert.Equal("Invalid zip url specified (StatusCode: NotFound)", error);
+            Assert.Equal("Invalid zip url specified", error);
 
             var logs = _loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
             Assert.Collection(logs,
                 p => Assert.StartsWith("Validating host assignment context (SiteId: 1234, SiteName: 'TestSite')", p),
+                p => Assert.StartsWith("Invalid zip url specified (StatusCode: NotFound)", p),
+                p => Assert.StartsWith("Invalid zip url specified (StatusCode: NotFound)", p),
                 p => Assert.StartsWith("Invalid zip url specified (StatusCode: NotFound)", p),
                 p => Assert.Contains("404 (Not Found)", p));
         }

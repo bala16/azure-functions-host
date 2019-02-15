@@ -521,6 +521,7 @@ namespace Microsoft.Azure.WebJobs.Script
             return false;
         }
 
+        // Remove secrets from sas urls.
         public static string CleanUrl(string url)
         {
             url = url ?? string.Empty;
