@@ -63,7 +63,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpPost]
         [Route("admin/instance/authcontainer")]
-        private IActionResult AuthenticateContainer(HostAssignmentContext assignmentContext)
+        public IActionResult AuthenticateContainer()
         {
             var authenticateContainer = DoAuth().Result;
             Console.WriteLine("authenticateContainer =" + authenticateContainer);
