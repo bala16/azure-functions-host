@@ -1,12 +1,15 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
+using Microsoft.Azure.WebJobs.Script.WebHost.Security;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
@@ -56,6 +59,62 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult GetInstanceInfo()
         {
             return Ok(_instanceManager.GetInstanceInfo());
+        }
+
+        [HttpPost]
+        [Route("admin/instance/authcontainer")]
+        private IActionResult AuthenticateContainer(HostAssignmentContext assignmentContext)
+        {
+            var authenticateContainer = DoAuth().Result;
+            Console.WriteLine("authenticateContainer =" + authenticateContainer);
+            return Ok(authenticateContainer);
+        }
+
+        internal static HttpRequestMessage BuildSetTriggersRequest()
+        {
+            var protocol = "https";
+            // On private stamps with no ssl certificate use http instead.
+            if (Environment.GetEnvironmentVariable(EnvironmentSettingNames.SkipSslValidation) == "1")
+            {
+                protocol = "http";
+            }
+
+            Console.WriteLine("=============protocol=" + protocol);
+
+            var hostname = Environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHostName);
+            Console.WriteLine("=============hostname1=" + hostname);
+            // Linux Dedicated on AppService doesn't have WEBSITE_HOSTNAME
+            hostname = string.IsNullOrWhiteSpace(hostname)
+                ? $"{Environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteName)}.azurewebsites.net"
+                : hostname;
+            Console.WriteLine("=============hostname2=" + hostname);
+
+            var url = $"{protocol}://{hostname}/operations/authenticatesfcontainer";
+
+            Console.WriteLine("=============url=" + url);
+            return new HttpRequestMessage(HttpMethod.Post, url);
+        }
+
+        private static async Task<string> DoAuth()
+        {
+            var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
+
+            Console.WriteLine("=============token=" + token);
+
+            using (var httpClient = new HttpClient())
+            {
+                using (var httpRequestMessage = BuildSetTriggersRequest())
+                {
+                    httpRequestMessage.Headers.Add("User-Agent", "Mozilla/5.0");
+                    httpRequestMessage.Headers.Add("x-ms-site-restricted-token", token);
+
+                    var response = await httpClient.SendAsync(httpRequestMessage);
+
+                    var statusCode = response.StatusCode;
+                    var content = await response.Content.ReadAsStringAsync();
+                    return $"{statusCode} {content}";
+                }
+            }
         }
     }
 }
