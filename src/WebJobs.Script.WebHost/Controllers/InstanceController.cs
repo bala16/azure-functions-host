@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -65,9 +66,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/instance/authcontainer")]
         public IActionResult AuthenticateContainer(bool useToken)
         {
-            var authenticateContainer = DoAuth(useToken).Result;
-            Console.WriteLine("authenticateContainer =" + authenticateContainer);
-            return Ok(authenticateContainer);
+            var authresult = DoAuth(useToken).Result;
+            Console.WriteLine("authresult =" + authresult);
+            return StatusCode((int)authresult, "AuthResult");
         }
 
         internal static HttpRequestMessage BuildSetTriggersRequest()
@@ -95,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return new HttpRequestMessage(HttpMethod.Post, url);
         }
 
-        private static async Task<string> DoAuth(bool useToken)
+        private static async Task<HttpStatusCode> DoAuth(bool useToken)
         {
             var token = useToken ? SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5)) : string.Empty;
 
@@ -109,10 +110,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     httpRequestMessage.Headers.Add("x-ms-site-restricted-token", token);
 
                     var response = await httpClient.SendAsync(httpRequestMessage);
-
-                    var statusCode = response.StatusCode;
-                    var content = await response.Content.ReadAsStringAsync();
-                    return $"{statusCode} {content}";
+                    return response.StatusCode;
                 }
             }
         }
