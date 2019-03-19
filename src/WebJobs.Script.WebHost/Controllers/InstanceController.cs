@@ -63,9 +63,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpPost]
         [Route("admin/instance/authcontainer")]
-        public IActionResult AuthenticateContainer()
+        public IActionResult AuthenticateContainer(bool useToken)
         {
-            var authenticateContainer = DoAuth().Result;
+            var authenticateContainer = DoAuth(useToken).Result;
             Console.WriteLine("authenticateContainer =" + authenticateContainer);
             return Ok(authenticateContainer);
         }
@@ -95,9 +95,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return new HttpRequestMessage(HttpMethod.Post, url);
         }
 
-        private static async Task<string> DoAuth()
+        private static async Task<string> DoAuth(bool useToken)
         {
-            var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
+            var token = useToken ? SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5)) : string.Empty;
 
             Console.WriteLine("=============token=" + token);
 
