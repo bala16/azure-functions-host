@@ -98,7 +98,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         private static async Task<HttpStatusCode> DoAuth(bool useToken)
         {
-            var token = useToken ? SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5)) : string.Empty;
+            var token = useToken ? SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5)) : "WrongToken";
 
             Console.WriteLine("=============token=" + token);
 
