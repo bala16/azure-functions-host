@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             var mockAuthorizationService = new Mock<IAuthorizationService>(MockBehavior.Strict);
             var mockWebFunctionsManager = new Mock<IWebFunctionsManager>(MockBehavior.Strict);
             _mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(It.IsAny<string>())).Returns<string>(null);
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(It.IsAny<string>(), null)).Returns<string>(null);
             _mockScriptHostManager = new Mock<IScriptHostManager>(MockBehavior.Strict);
             _functionsSyncManager = new Mock<IFunctionsSyncManager>(MockBehavior.Strict);
 

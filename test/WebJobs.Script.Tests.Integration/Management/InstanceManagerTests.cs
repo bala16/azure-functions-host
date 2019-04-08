@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             // specialization is done in the background
             await Task.Delay(500);
 
-            var value = _environment.GetEnvironmentVariable(envValue.Name);
+            var value = _environment.GetEnvironmentVariable(envValue.Name, null);
             Assert.Equal(value, envValue.Value);
 
             // verify logs

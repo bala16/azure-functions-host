@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -17,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Script
         /// </summary>
         /// <param name="name">The environment variable name.</param>
         /// <returns>The value of the environment variable specified by <paramref name="name"/>, or <see cref="null"/> if the environment variable is not found.</returns>
-        string GetEnvironmentVariable(string name);
+        string GetEnvironmentVariable(string name, ILogger logger = null);
 
         /// <summary>
         /// Creates, modifies, or deletes an environment variable stored in the current <see cref="IEnvironment"/>

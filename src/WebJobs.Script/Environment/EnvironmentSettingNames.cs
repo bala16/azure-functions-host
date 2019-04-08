@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Collections.Generic;
+
 namespace Microsoft.Azure.WebJobs.Script
 {
     public static class EnvironmentSettingNames
@@ -32,6 +34,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string EasyAuthEnabled = "WEBSITE_AUTH_ENABLED";
         public const string AzureWebJobsSecretStorageKeyVaultName = "AzureWebJobsSecretStorageKeyVaultName";
         public const string AzureWebJobsSecretStorageKeyVaultConnectionString = "AzureWebJobsSecretStorageKeyVaultConnectionString";
+        public const string ContainerEnvironmentVariablesEncoded = "CONTAINER_ENV_VARIABLES_ENCODED";
 
         /// <summary>
         /// Environment variable dynamically set by the platform when it is safe to
@@ -54,5 +57,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string CoreToolsEnvironment = "FUNCTIONS_CORETOOLS_ENVIRONMENT";
 
         public const string ExtensionBundleSourceUri = "FUNCTIONS_EXTENSIONBUNDLE_SOURCE_URI";
+
+        public static HashSet<string> EncodedSettingNames { get; } = new HashSet<string> { ContainerEncryptionKey, ContainerName, ContainerStartContextSasUri, ContainerStartContext };
     }
 }

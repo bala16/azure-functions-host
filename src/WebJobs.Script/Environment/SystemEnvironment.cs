@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -22,9 +23,19 @@ namespace Microsoft.Azure.WebJobs.Script
             return new SystemEnvironment();
         }
 
-        public string GetEnvironmentVariable(string name)
+        public string GetEnvironmentVariable(string name, ILogger logger = null)
         {
-            return Environment.GetEnvironmentVariable(name);
+            logger?.LogInformation("GetEnvironmentVariable name " + name + " Contains " + EnvironmentSettingNames.EncodedSettingNames.Contains(name));
+
+            var environmentVariable = Environment.GetEnvironmentVariable(name);
+
+            logger?.LogInformation("GetEnvironmentVariable name " + name + " Contains " + EnvironmentSettingNames.EncodedSettingNames.Contains(name) + " environmentVariable = " + environmentVariable);
+
+            var isEnvironmentVariableEncrypted = this.IsEnvironmentVariableEncrypted(name, logger);
+
+            logger?.LogInformation("GetEnvironmentVariable name " + name + " Contains " + EnvironmentSettingNames.EncodedSettingNames.Contains(name) + " environmentVariable = " + environmentVariable + " isEnvironmentVariableEncrypted = " + isEnvironmentVariableEncrypted);
+
+            return isEnvironmentVariableEncrypted ? Utility.DecodeEnvironment(environmentVariable, logger) : environmentVariable;
         }
 
         public void SetEnvironmentVariable(string name, string value)

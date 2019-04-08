@@ -83,8 +83,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             _mockWebHostEnvironment = new Mock<IScriptWebHostEnvironment>(MockBehavior.Strict);
             _mockWebHostEnvironment.SetupGet(p => p.InStandbyMode).Returns(false);
             _mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady)).Returns("1");
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment)).Returns((string)null);
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady, null)).Returns("1");
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment, null)).Returns((string)null);
             _functionsSyncManager = new FunctionsSyncManager(configuration, hostIdProviderMock.Object, optionsMonitor, new OptionsWrapper<LanguageWorkerOptions>(CreateLanguageWorkerConfigSettings()), loggerFactory, httpClient, secretManagerProviderMock.Object, _mockWebHostEnvironment.Object, _mockEnvironment.Object);
 
             _expectedSyncTriggersPayload = "[{\"authLevel\":\"anonymous\",\"type\":\"httpTrigger\",\"direction\":\"in\",\"name\":\"req\",\"functionName\":\"function1\"}," +
@@ -116,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
         {
             using (var env = new TestScopedEnvironmentVariable(_vars))
             {
-                _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment)).Returns("1");
+                _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment, null)).Returns("1");
                 var result = await _functionsSyncManager.TrySyncTriggersAsync();
                 Assert.False(result.Success);
                 var expectedMessage = "Invalid environment for SyncTriggers operation.";

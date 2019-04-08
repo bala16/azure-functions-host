@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _testEnvironment.SetEnvironmentVariable(LanguageWorkerConstants.FunctionWorkerRuntimeSettingName, LanguageWorkerConstants.JavaLanguageWorkerName);
             var manager = new StandbyManager(_mockHostManager.Object, _mockLanguageWorkerChannelManager.Object, _mockConfiguration.Object, _mockWebHostEnvironment.Object, _testEnvironment, _mockOptionsMonitor.Object, NullLogger<StandbyManager>.Instance);
             await manager.SpecializeHostAsync();
-            Assert.Equal(_testSettingValue, _testEnvironment.GetEnvironmentVariable(_testSettingName));
+            Assert.Equal(_testSettingValue, _testEnvironment.GetEnvironmentVariable(_testSettingName, null));
         }
     }
 }

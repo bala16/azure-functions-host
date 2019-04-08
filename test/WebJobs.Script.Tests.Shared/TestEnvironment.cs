@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
@@ -28,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _variables.Clear();
         }
 
-        public string GetEnvironmentVariable(string name)
+        public string GetEnvironmentVariable(string name, ILogger logger)
         {
             _variables.TryGetValue(name, out string result);
 

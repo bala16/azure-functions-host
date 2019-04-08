@@ -15,8 +15,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         public void Configure_Dynamic_AppService_Defaults()
         {
             var mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId)).Returns("1234");
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku)).Returns(ScriptConstants.DynamicSku);
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId, null)).Returns("1234");
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku, null)).Returns(ScriptConstants.DynamicSku);
 
             var setup = new HttpOptionsSetup(mockEnvironment.Object);
             var options = new HttpOptions();
@@ -31,8 +31,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         public void Configure_Dynamic_NonAppService_Defaults()
         {
             var mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId)).Returns((string)null);
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku)).Returns(ScriptConstants.DynamicSku);
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId, null)).Returns((string)null);
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku, null)).Returns(ScriptConstants.DynamicSku);
 
             var setup = new HttpOptionsSetup(mockEnvironment.Object);
             var options = new HttpOptions();
@@ -47,8 +47,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         public void Configure_Dedicated_DoesNotDefault()
         {
             var mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId)).Returns("1234");
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku)).Returns("Dedicated");
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId, null)).Returns("1234");
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteSku, null)).Returns("Dedicated");
 
             var setup = new HttpOptionsSetup(mockEnvironment.Object);
             var options = new HttpOptions();

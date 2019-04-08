@@ -42,8 +42,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _mockWebHostEnvironment = new Mock<IScriptWebHostEnvironment>(MockBehavior.Strict);
             _mockWebHostEnvironment.SetupGet(p => p.InStandbyMode).Returns(false);
             _mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady)).Returns("1");
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment)).Returns((string)null);
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady, null)).Returns("1");
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment, null)).Returns((string)null);
 
             _syncService = new FunctionsSyncService(loggerFactory, _mockScriptHostManager.Object, _mockPrimaryHostStateProviderMock.Object, _mockSyncManager.Object);
             _syncService.DueTime = _testDueTime;
@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         public void IsSyncTriggersEnvironment_StandbyMode_ReturnsExpectedResult(bool standbyMode, bool containerReady, bool expected)
         {
             _mockWebHostEnvironment.SetupGet(p => p.InStandbyMode).Returns(standbyMode);
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady)).Returns(containerReady ? "1" : null);
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady, null)).Returns(containerReady ? "1" : null);
 
             var result = FunctionsSyncManager.IsSyncTriggersEnvironment(_mockWebHostEnvironment.Object, _mockEnvironment.Object);
             Assert.Equal(expected, result);
@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         [InlineData(false, true)]
         public void IsSyncTriggersEnvironment_LocalEnvironment_ReturnsExpectedResult(bool coreToolsEnvironment, bool expected)
         {
-            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment)).Returns(coreToolsEnvironment ? "1" : null);
+            _mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.CoreToolsEnvironment, null)).Returns(coreToolsEnvironment ? "1" : null);
 
             var result = FunctionsSyncManager.IsSyncTriggersEnvironment(_mockWebHostEnvironment.Object, _mockEnvironment.Object);
             Assert.Equal(expected, result);

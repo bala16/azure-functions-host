@@ -29,8 +29,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            _logger?.LogInformation("ArmAuthenticationHandler.HandleAuthenticateAsync");
             AuthenticateResult result = HandleAuthenticate();
 
+            _logger?.LogInformation("ArmAuthenticationHandler.HandleAuthenticateAsync result " + result);
             return Task.FromResult(result);
         }
 
@@ -39,6 +41,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
             string token = null;
             if (!Context.Request.Headers.TryGetValue(ArmTokenHeaderName, out StringValues values))
             {
+                _logger?.LogInformation("ArmAuthenticationHandler.HandleAuthenticateAsync No token");
                 return AuthenticateResult.NoResult();
             }
 
@@ -46,9 +49,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
 
             try
             {
-                if (!SimpleWebTokenHelper.ValidateToken(token, Clock))
+                _logger?.LogInformation("HandleAuthenticate using token = " + token);
+                if (!SimpleWebTokenHelper.ValidateToken(token, Clock, _logger))
                 {
+                    _logger?.LogInformation("Token validation failed for token = " + token);
                     return AuthenticateResult.Fail("Token validation failed.");
+                }
+                else
+                {
+                    _logger?.LogInformation("Token validation ok for token = " + token);
                 }
 
                 var claims = new List<Claim>
@@ -61,7 +70,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
             }
             catch (Exception exc)
             {
-                _logger.LogError(exc, "ARM authentication token validation failed.");
+                _logger?.LogError(exc, "ARM authentication token validation failed.");
                 return AuthenticateResult.Fail(exc);
             }
         }

@@ -539,6 +539,26 @@ namespace Microsoft.Azure.WebJobs.Script
             return false;
         }
 
+        public static string DecodeEnvironment(string value, ILogger logger)
+        {
+            try
+            {
+                logger?.LogInformation("DecodeEnvironment value = " + value);
+                var padded = string.Concat(value, new string('=', (4 - (value.Length % 4)) % 4));
+                var decodeEnvironment = Encoding.UTF8.GetString(System.Convert.FromBase64String(padded));
+
+                logger?.LogInformation("DecodeEnvironment value = " + value + " decodeEnvironment " + decodeEnvironment);
+
+                return decodeEnvironment;
+            }
+            catch (Exception e)
+            {
+                logger?.LogInformation("DecodeEnvironment value = " + value + " Exception " + e);
+
+                throw new Exception($"Failed to decrypt {value} with {e}");
+            }
+        }
+
         private class FilteredExpandoObjectConverter : ExpandoObjectConverter
         {
             public override bool CanWrite => true;

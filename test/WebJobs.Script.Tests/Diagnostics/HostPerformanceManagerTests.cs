@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Diagnostics
             var mockEnvironment = new Mock<IEnvironment>(MockBehavior.Strict);
             string value = string.Empty;
             var logger = new TestLogger("Test");
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteAppCountersName)).Returns(() => value);
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteAppCountersName, null)).Returns(() => value);
             var options = new HostHealthMonitorOptions();
             var performanceManager = new HostPerformanceManager(mockEnvironment.Object, new OptionsWrapper<HostHealthMonitorOptions>(options));
 

@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Host
                 });
 
             var mockEnvironment = new Mock<IEnvironment>();
-            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId)).Returns("testapp");
+            mockEnvironment.Setup(p => p.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteInstanceId, null)).Returns("testapp");
 
             var mockHostPerformanceManager = new Mock<HostPerformanceManager>(mockEnvironment.Object, wrappedHealthMonitorOptions);
 

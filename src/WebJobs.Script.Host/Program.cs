@@ -45,8 +45,6 @@ namespace Microsoft.Azure.WebJobs.Script.Host
                 .UseConsoleLifetime()
                 .Build();
 
-            Console.WriteLine("Starting host");
-
             using (host)
             {
                 await host.RunAsync();

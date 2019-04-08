@@ -295,7 +295,7 @@ namespace Microsoft.Azure.WebJobs.Script
                 _logger.LogWarning("Host id explicitly set in configuration. This is not a recommended configuration and may lead to unexpected behavior.");
             }
 
-            string extensionVersion = _environment.GetEnvironmentVariable(EnvironmentSettingNames.FunctionsExtensionVersion);
+            string extensionVersion = _environment.GetEnvironmentVariable(EnvironmentSettingNames.FunctionsExtensionVersion, null);
             string hostId = await _hostIdProvider.GetHostIdAsync(CancellationToken.None);
             string message = $"Starting Host (HostId={hostId}, InstanceId={InstanceId}, Version={Version}, ProcessId={Process.GetCurrentProcess().Id}, AppDomainId={AppDomain.CurrentDomain.Id}, InDebugMode={InDebugMode}, InDiagnosticMode={InDiagnosticMode}, FunctionsExtensionVersion={extensionVersion})";
             _logger.LogInformation(message);

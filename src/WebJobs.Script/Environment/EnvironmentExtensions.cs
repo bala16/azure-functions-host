@@ -4,6 +4,8 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Extensions.Logging;
 using static Microsoft.Azure.WebJobs.Script.EnvironmentSettingNames;
 
 namespace Microsoft.Azure.WebJobs.Script
@@ -150,6 +152,38 @@ namespace Microsoft.Azure.WebJobs.Script
         public static bool IsContainerReady(this IEnvironment environment)
         {
             return !string.IsNullOrEmpty(environment.GetEnvironmentVariable(AzureWebsiteContainerReady));
+        }
+
+        private static bool IsEnvironmentEncodingEnabled(ILogger logger)
+        {
+            var isEnvironmentEncodingEnabled = Environment.GetEnvironmentVariable(ContainerEnvironmentVariablesEncoded);
+            logger?.LogInformation("IsEnvironmentEncodingEnabled " + isEnvironmentEncodingEnabled);
+            var environmentEncodingEnabled = !string.IsNullOrEmpty(isEnvironmentEncodingEnabled) && string.Equals("1",
+                                                 isEnvironmentEncodingEnabled, StringComparison.OrdinalIgnoreCase);
+            logger?.LogInformation("IsEnvironmentEncodingEnabled " + isEnvironmentEncodingEnabled + " environmentEncodingEnabled return value " + environmentEncodingEnabled);
+            return environmentEncodingEnabled;
+        }
+
+        public static bool IsEnvironmentVariableEncrypted(this IEnvironment environment, string key, ILogger logger)
+        {
+            var isEnvironmentEncodingEnabled = IsEnvironmentEncodingEnabled(logger);
+            logger?.LogInformation("IsEnvironmentVariableEncrypted key = " + key + " isEnvironmentEncodingEnabled " + isEnvironmentEncodingEnabled + " EncodedSettingNames.Count " + EncodedSettingNames.Count);
+            var stringBuilder = new StringBuilder();
+            foreach (var encodedSettingName in EncodedSettingNames)
+            {
+                stringBuilder.Append(encodedSettingName + " ");
+            }
+
+            logger?.LogInformation("IsEnvironmentVariableEncrypted allsettings = " + stringBuilder);
+
+            var contains = EncodedSettingNames.Contains(key);
+            logger?.LogInformation("IsEnvironmentVariableEncrypted key " + key + " containscheck " + contains);
+
+            var both = isEnvironmentEncodingEnabled && contains;
+
+            logger?.LogInformation("IsEnvironmentVariableEncrypted key " + key + " isEnvironmentEncodingEnabled && contains " + both);
+
+            return both;
         }
     }
 }

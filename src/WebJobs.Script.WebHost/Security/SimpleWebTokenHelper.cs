@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
 {
@@ -26,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
         {
             if (key == null)
             {
-                TryGetEncryptionKey(EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key);
+                TryGetEncryptionKey(null, EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key);
             }
 
             using (var aes = new AesManaged { Key = key })
@@ -88,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
         {
             try
             {
-                return ValidateToken(token, systemClock);
+                return ValidateToken(token, systemClock, null);
             }
             catch
             {
@@ -96,14 +97,26 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
             }
         }
 
-        public static bool ValidateToken(string token, ISystemClock systemClock)
+        public static bool ValidateToken(string token, ISystemClock systemClock, ILogger logger)
         {
             // Use WebSiteAuthEncryptionKey if available else fallback to ContainerEncryptionKey.
             // Until the container is specialized to a specific site WebSiteAuthEncryptionKey will not be available.
             byte[] key;
-            if (!TryGetEncryptionKey(EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key, false))
+            if (!TryGetEncryptionKey(logger, EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key, false))
             {
-                TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key);
+                logger?.LogInformation("SimpleWebTokenHelper.ValidateToken EnvironmentSettingNames.WebSiteAuthEncryptionKey notfound ");
+                if (TryGetEncryptionKey(logger, EnvironmentSettingNames.ContainerEncryptionKey, out key))
+                {
+                    logger?.LogInformation("SimpleWebTokenHelper.ValidateToken EnvironmentSettingNames.ContainerEncryptionKey found " + key);
+                }
+                else
+                {
+                    logger?.LogInformation("SimpleWebTokenHelper.ValidateToken EnvironmentSettingNames.ContainerEncryptionKey notfound ");
+                }
+            }
+            else
+            {
+                logger?.LogInformation("SimpleWebTokenHelper.ValidateToken EnvironmentSettingNames.WebSiteAuthEncryptionKey found " + key);
             }
 
             var data = Decrypt(key, token);
@@ -127,12 +140,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
             }
         }
 
-        private static bool TryGetEncryptionKey(string keyName, out byte[] encryptionKey, bool throwIfFailed = true)
+        private static bool TryGetEncryptionKey(ILogger logger, string keyName, out byte[] encryptionKey, bool throwIfFailed = true)
         {
             encryptionKey = null;
-            var hexOrBase64 = Environment.GetEnvironmentVariable(keyName);
+
+            logger?.LogInformation("SimpleWebTokenHelper.TryGetEncryptionKey " + keyName);
+            var hexOrBase64 = SystemEnvironment.Instance.GetEnvironmentVariable(keyName, logger);
+            logger?.LogInformation("SimpleWebTokenHelper.TryGetEncryptionKey " + keyName + " hexOrBase64 = " + hexOrBase64);
             if (string.IsNullOrEmpty(hexOrBase64))
             {
+                logger?.LogInformation("TryGetEncryptionKey " + keyName + " value= " + hexOrBase64 + " throwIfFailed " + throwIfFailed);
                 if (throwIfFailed)
                 {
                     throw new InvalidOperationException($"No {keyName} defined in the environment");

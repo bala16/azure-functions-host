@@ -35,14 +35,14 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.ContainerManagement
         {
             // These settings being null will cause IsLinuxContainerEnvironment to return false.
             var environmentMock = new Mock<IEnvironment>(MockBehavior.Strict);
-            environmentMock.Setup(env => env.GetEnvironmentVariable(ContainerName)).Returns<string>(null);
-            environmentMock.Setup(env => env.GetEnvironmentVariable(AzureWebsiteInstanceId)).Returns<string>(null);
+            environmentMock.Setup(env => env.GetEnvironmentVariable(ContainerName, null)).Returns<string>(null);
+            environmentMock.Setup(env => env.GetEnvironmentVariable(AzureWebsiteInstanceId, null)).Returns<string>(null);
 
             var initializationHostService = new LinuxContainerInitializationHostService(environmentMock.Object, _instanceManagerMock.Object, NullLogger<LinuxContainerInitializationHostService>.Instance);
             await initializationHostService.StartAsync(CancellationToken.None);
 
             // Make sure no other environment variables were checked
-            environmentMock.Verify(env => env.GetEnvironmentVariable(It.Is<string>(p => p != ContainerName && p != AzureWebsiteInstanceId)), Times.Never);
+            environmentMock.Verify(env => env.GetEnvironmentVariable(It.Is<string>(p => p != ContainerName && p != AzureWebsiteInstanceId), null), Times.Never);
         }
 
         [Fact]
