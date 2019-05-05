@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 {
@@ -40,6 +41,35 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _metricsLogger = metricsLogger;
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
             _optionsFactory = optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory));
+        }
+
+        public async Task<string> SpecializeMSISidecar(HostAssignmentContext context)
+        {
+            var msiEnabled = !string.IsNullOrEmpty(context.MsiEndpoint);
+            _logger.LogInformation($"MSI status: {msiEnabled}");
+
+            if (msiEnabled)
+            {
+                var uri = new Uri(context.MsiEndpoint);
+                var address = $"http://{uri.Host}:{uri.Port}/api/specialize";
+
+                _logger.LogDebug($"Specializing container at {address}");
+
+                var requestMessage = new HttpRequestMessage(HttpMethod.Post, address)
+                {
+                    Content = new StringContent(JsonConvert.SerializeObject(context.MSISpecializationPayload))
+                };
+
+                var response = await _client.SendAsync(requestMessage);
+                if (!response.IsSuccessStatusCode)
+                {
+                    string message = $"Specialize sidecar call failed. StatusCode={response.StatusCode}";
+                    _logger.LogError(message);
+                    return message;
+                }
+            }
+
+            return null;
         }
 
         public bool StartAssignment(HostAssignmentContext context)

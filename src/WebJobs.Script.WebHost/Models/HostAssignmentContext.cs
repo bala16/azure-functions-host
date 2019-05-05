@@ -21,6 +21,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
         [JsonProperty("lastModifiedTime")]
         public DateTime LastModifiedTime { get; set; }
 
+        public MSISpecializationPayload MSISpecializationPayload { get; set; }
+
         public string ZipUrl
         {
             get
@@ -43,6 +45,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
                 }
             }
         }
+
+        public string MsiEndpoint => Environment[EnvironmentSettingNames.MsiEndpoint];
 
         public bool Equals(HostAssignmentContext other)
         {
