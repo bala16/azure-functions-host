@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Rewrite.Internal.PatternSegments;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
@@ -49,9 +50,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _logger.LogInformation($"AAA MSI_ENDPOINT = {environmentVariable}");
             var uri = new Uri(environmentVariable);
             var address = $"http://{uri.Host}:{uri.Port}/api/reply?text=abcd1234";
-            _logger.LogInformation($"AAA address = {address}");
-            await Task.Delay(0);
-            return address;
+
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, address);
+            var response = await _client.SendAsync(httpRequestMessage);
+
+            _logger.LogInformation($"Response from sidecar status {response.StatusCode}");
+
+            var message = $"AAA address = {address} returned {response.StatusCode} content {response.Content.ReadAsStringAsync()}";
+            _logger.LogInformation(message);
+            return message;
         }
 
         public async Task<string> SpecializeMSISidecar(HostAssignmentContext context)
