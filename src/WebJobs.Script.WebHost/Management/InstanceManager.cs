@@ -43,6 +43,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _optionsFactory = optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory));
         }
 
+        public async Task<string> GetReply()
+        {
+            var environmentVariable = _environment.GetEnvironmentVariable("MSI_ENDPOINT");
+            _logger.LogInformation($"AAA MSI_ENDPOINT = {environmentVariable}");
+            var uri = new Uri(environmentVariable);
+            var address = $"http://{uri.Host}:{uri.Port}/api/reply?text=abcd1234";
+            _logger.LogInformation($"AAA address = {address}");
+            await Task.Delay(0);
+            return address;
+        }
+
         public async Task<string> SpecializeMSISidecar(HostAssignmentContext context)
         {
             var msiEnabled = !string.IsNullOrEmpty(context.MsiEndpoint);

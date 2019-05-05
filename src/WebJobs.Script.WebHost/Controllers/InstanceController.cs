@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +28,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             _instanceManager = instanceManager;
         }
 
+        [HttpGet]
+        [Route("admin/instance/getreply")]
+        public string GetReply()
+        {
+            return _instanceManager.GetReply().Result;
+        }
+
         [HttpPost]
         [Route("admin/instance/assign")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
@@ -45,11 +53,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
             // Wait for Sidecar specialization to complete before returning ok.
             // This shouldn't take too long. Consider parallelizing with validate if required.
-            error = await _instanceManager.SpecializeMSISidecar(assignmentContext);
-            if (error != null)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, error);
-            }
+//            error = await _instanceManager.SpecializeMSISidecar(assignmentContext);
+//            if (error != null)
+//            {
+//                return StatusCode(StatusCodes.Status500InternalServerError, error);
+//            }
 
             var result = _instanceManager.StartAssignment(assignmentContext);
 
