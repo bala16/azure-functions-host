@@ -56,7 +56,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             _logger.LogInformation($"Response from sidecar status {response.StatusCode}");
 
-            var message = $"AAA address = {address} returned {response.StatusCode} content {response.Content.ReadAsStringAsync()}";
+            string readAsStringAsync = await response.Content.ReadAsStringAsync();
+            var message = $"AAA address = {address} returned {response.StatusCode} content {readAsStringAsync}";
             _logger.LogInformation(message);
             return message;
         }
