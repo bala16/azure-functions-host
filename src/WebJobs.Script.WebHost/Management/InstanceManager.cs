@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                 var requestMessage = new HttpRequestMessage(HttpMethod.Post, address)
                 {
-                    Content = new StringContent(JsonConvert.SerializeObject(context.MSISpecializationPayload))
+                    Content = new StringContent(JsonConvert.SerializeObject(context.MSISpecializationPayload), Encoding.UTF8, "application/json")
                 };
 
                 var response = await _client.SendAsync(requestMessage);
