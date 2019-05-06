@@ -62,6 +62,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return message;
         }
 
+        public async Task<string> GetMsi()
+        {
+            var environmentVariable = _environment.GetEnvironmentVariable("MSI_ENDPOINT");
+            _logger.LogInformation($"BBB MSI_ENDPOINT = {environmentVariable}");
+            var uri = new Uri(environmentVariable);
+            var address = $"http://{uri.Host}:{uri.Port}/api/specialize";
+
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, address);
+            var response = await _client.SendAsync(httpRequestMessage);
+
+            _logger.LogInformation($"Response from sidecar status {response.StatusCode}");
+
+            string readAsStringAsync = await response.Content.ReadAsStringAsync();
+            var message = $"AAA address = {address} returned {response.StatusCode} content {readAsStringAsync}";
+            _logger.LogInformation(message);
+            return message;
+        }
+
         public async Task<string> SpecializeMSISidecar(HostAssignmentContext context)
         {
             var msiEnabled = !string.IsNullOrEmpty(context.MsiEndpoint);

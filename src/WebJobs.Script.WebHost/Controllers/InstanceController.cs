@@ -35,6 +35,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return _instanceManager.GetReply().Result;
         }
 
+        [HttpGet]
+        [Route("admin/instance/getmsi")]
+        public string GetReply()
+        {
+            return _instanceManager.GetReply().Result;
+        }
+
         [HttpPost]
         [Route("admin/instance/assign")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
@@ -53,11 +60,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
             // Wait for Sidecar specialization to complete before returning ok.
             // This shouldn't take too long. Consider parallelizing with validate if required.
-//            error = await _instanceManager.SpecializeMSISidecar(assignmentContext);
-//            if (error != null)
-//            {
-//                return StatusCode(StatusCodes.Status500InternalServerError, error);
-//            }
+            error = await _instanceManager.SpecializeMSISidecar(assignmentContext);
+            if (error != null)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, error);
+            }
 
             var result = _instanceManager.StartAssignment(assignmentContext);
 

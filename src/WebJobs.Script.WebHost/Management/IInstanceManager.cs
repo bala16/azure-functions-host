@@ -18,5 +18,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         Task<string> SpecializeMSISidecar(HostAssignmentContext assignmentContext);
 
         Task<string> GetReply();
+
+        Task<string> GetMsi();
     }
 }
