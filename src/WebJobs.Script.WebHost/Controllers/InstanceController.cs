@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/instance/getmsi")]
         public string GetMsi()
         {
-            return _instanceManager.GetReply().Result;
+            return _instanceManager.GetMsi().Result;
         }
 
         [HttpPost]
