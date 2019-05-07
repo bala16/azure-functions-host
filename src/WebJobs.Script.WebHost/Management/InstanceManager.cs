@@ -71,8 +71,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var address = $"http://{uri.Host}:{uri.Port}/api/specialize";
 
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, address);
+
             var variable = _environment.GetEnvironmentVariable("XX-MSI");
             _logger.LogInformation(string.Format("XX-MSI length = {0}", variable?.Length ?? -1));
+
             httpRequestMessage.Content = new StringContent(variable, Encoding.UTF8, "application/json");
             var response = await _client.SendAsync(httpRequestMessage);
 
@@ -92,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             if (msiEnabled)
             {
                 var uri = new Uri(context.MsiEndpoint);
-                var address = $"http://{uri.Host}:{uri.Port}/api/specialize";
+                var address = $"http://{uri.Host}:{uri.Port}/api/specialize?api-version=2017-09-01";
 
                 _logger.LogDebug($"Specializing container at {address}");
 
