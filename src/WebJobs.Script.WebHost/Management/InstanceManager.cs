@@ -64,6 +64,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         public async Task<string> GetMsi()
         {
+            _logger.LogInformation("GETMsi");
             var environmentVariable = _environment.GetEnvironmentVariable("MSI_ENDPOINT");
             _logger.LogInformation($"BBB MSI_ENDPOINT = {environmentVariable}");
             var uri = new Uri(environmentVariable);
@@ -77,8 +78,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             _logger.LogInformation($"Response from sidecar status {response.StatusCode}");
 
-            string readAsStringAsync = await response.Content.ReadAsStringAsync();
-            var message = $"AAA address = {address} returned {response.StatusCode} content {readAsStringAsync}";
+            var readAsStringAsync = await response.Content.ReadAsStringAsync();
+            var message = $"CCC address = {address} returned {response.StatusCode} content {readAsStringAsync}";
             _logger.LogInformation(message);
             return message;
         }
