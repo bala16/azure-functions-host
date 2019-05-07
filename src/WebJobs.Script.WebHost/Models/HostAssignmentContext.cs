@@ -64,6 +64,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
             {
                 environment.SetEnvironmentVariable(pair.Key, pair.Value);
             }
+
+            environment.SetEnvironmentVariable("XX-MSI", JsonConvert.SerializeObject(MSISpecializationPayload));
         }
     }
 }

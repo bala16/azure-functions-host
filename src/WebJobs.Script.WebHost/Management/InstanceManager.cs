@@ -70,6 +70,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var address = $"http://{uri.Host}:{uri.Port}/api/specialize";
 
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, address);
+            var variable = _environment.GetEnvironmentVariable("XX-MSI");
+            _logger.LogInformation(string.Format("XX-MSI length = {0}", variable?.Length ?? -1));
+            httpRequestMessage.Content = new StringContent(variable, Encoding.UTF8, "application/json");
             var response = await _client.SendAsync(httpRequestMessage);
 
             _logger.LogInformation($"Response from sidecar status {response.StatusCode}");
