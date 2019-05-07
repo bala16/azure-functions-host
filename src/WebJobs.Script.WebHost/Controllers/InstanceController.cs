@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
+using NuGet.Protocol;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -40,6 +41,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public string GetMsi()
         {
             return _instanceManager.GetMsi().Result;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/token")]
+        public string Token()
+        {
+            return _instanceManager.Token(Request);
         }
 
         [HttpPost]

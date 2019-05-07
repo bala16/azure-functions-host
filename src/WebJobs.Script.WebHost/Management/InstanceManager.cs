@@ -11,7 +11,11 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using DryIoc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite.Internal.PatternSegments;
+using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
@@ -60,6 +64,85 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var message = $"AAA address = {address} returned {response.StatusCode} content {readAsStringAsync}";
             _logger.LogInformation(message);
             return message;
+        }
+
+        public string Token(HttpRequest request)
+        {
+            _logger.LogInformation("Start Token()");
+            // Get query string parameters
+            var tokenProvider = new AzureServiceTokenProvider();
+
+            var resource = request.Query["resource"].ToString();
+
+            _logger.LogInformation($"Resource = {resource}");
+
+            var useAsal = false;
+
+            bool.TryParse(request.Query["useAsal"].ToString(), out useAsal);
+
+            _logger.LogInformation($"useAsal = {useAsal}");
+
+            string resourceId = null;
+            string clientId = null;
+            if (request.Query.ContainsKey("ResourceId"))
+            {
+                resourceId = request.Query["ResourceId"].ToString();
+            }
+
+            if (request.Query.ContainsKey("ClientId"))
+            {
+                clientId = request.Query["ClientId"].ToString();
+            }
+
+            _logger.LogInformation($"resourceId = {resourceId}");
+            _logger.LogInformation($"clientId = {clientId}");
+
+            //string token = "";
+            if (useAsal)
+            {
+                var token = tokenProvider.GetAccessTokenAsync(resource).Result;
+                _logger.LogInformation($"Returning asal token = {token}");
+                return string.Format("Asal payload = {0}", token);
+            }
+            else
+            {
+                var endpoint = Environment.GetEnvironmentVariable("MSI_ENDPOINT");
+                _logger.LogInformation($"endpoint = {endpoint}");
+
+                var secret = Environment.GetEnvironmentVariable("MSI_SECRET");
+                _logger.LogInformation($"secret = {secret}");
+
+                var apiversion = request.Query["apiver"].ToString();
+                _logger.LogInformation($"apiversion = {apiversion}");
+
+                var path = string.Format("{0}?api-version={1}&resource={2}&resourceId={3}&clientId={4}", endpoint, apiversion, resource, resourceId, clientId);
+                _logger.LogInformation($"path = {path}");
+
+                string bypassCache = null;
+                if (request.Query.ContainsKey("bypassCache"))
+                {
+                    bypassCache = request.Query["bypassCache"];
+                }
+
+                if (bypassCache != null)
+                {
+                    path += "&bypassCache=" + bypassCache;
+                }
+
+                _logger.LogInformation(string.Format("Sending request to: {0}", path));
+
+                //Make http call
+                var client = new HttpClient();
+                var requestMessage = new HttpRequestMessage(HttpMethod.Get, path);
+                requestMessage.Headers.Add("SECRET", secret);
+                var result = client.SendAsync(requestMessage).Result; //.Content.ReadAsStringAsync().Result;
+
+                var payload = result.Content.ReadAsStringAsync().Result;
+
+                string format = string.Format("StatusCode: {0} Payload {1}", (int)result.StatusCode, payload);
+                _logger.LogInformation($"Return format {format}");
+                return format;
+            }
         }
 
         public async Task<string> GetMsi()

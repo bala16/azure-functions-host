@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
@@ -20,5 +21,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         Task<string> GetReply();
 
         Task<string> GetMsi();
+
+        string Token(HttpRequest request);
     }
 }
