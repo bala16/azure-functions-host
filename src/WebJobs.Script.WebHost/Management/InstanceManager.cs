@@ -59,6 +59,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                     _logger.LogDebug($"Specializing sidecar at {address}");
 
+                    // Fill in these fields until sidecar gets them directly from AppService.
+                    if (!context.MSIContext.SkipIdentityFields)
+                    {
+                        context.MSIContext.ManagedServiceIdentityIdentityContext = new ManagedServiceIdentityIdentityContext()
+                        {
+                            SiteName = context.SiteName,
+                            ContainerName = _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName),
+                            TenantId = _environment.GetEnvironmentVariable(EnvironmentSettingNames
+                                .WebSiteStampDeploymentId),
+                            StampName = _environment.GetEnvironmentVariable(
+                                EnvironmentSettingNames.WebSiteHomeStampName)
+                        };
+                        context.MSIContext.SiteName = context.SiteName;
+                    }
+
                     var requestMessage = new HttpRequestMessage(HttpMethod.Post, address)
                     {
                         Content = new StringContent(JsonConvert.SerializeObject(context.MSIContext),

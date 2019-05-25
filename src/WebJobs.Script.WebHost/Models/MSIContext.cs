@@ -7,8 +7,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
 {
     public class MSIContext
     {
+        public bool SkipIdentityFields { get; set; }
+
+        public string SiteName { get; set; }
+
         public string MSISecret { get; set; }
 
         public IEnumerable<ManagedServiceIdentity> Identities { get; set; }
+
+        public ManagedServiceIdentityIdentityContext ManagedServiceIdentityIdentityContext { get; set; }
     }
 }
