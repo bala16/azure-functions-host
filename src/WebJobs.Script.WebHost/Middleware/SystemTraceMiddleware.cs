@@ -27,6 +27,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
         public async Task Invoke(HttpContext context)
         {
+            _logger.LogInformation("Logging headers");
+            LogHeaders(context.Request);
+            _logger.LogInformation("Logged headers");
+
             SetRequestId(context.Request);
 
             var sw = new Stopwatch();
@@ -51,6 +55,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             details["status"] = context.Response.StatusCode;
             details["duration"] = sw.ElapsedMilliseconds;
             _logger.Log(LogLevel.Information, 0, logData, null, (s, e) => $"Executed HTTP request: {details}");
+        }
+
+        internal void LogHeaders(HttpRequest request)
+        {
+            foreach (var requestHeader in request.Headers)
+            {
+                var headerName = requestHeader.Key;
+                var value = requestHeader.Value.First();
+                _logger.LogInformation($"HEADER {headerName} VALUE {value}");
+            }
         }
 
         internal static void SetRequestId(HttpRequest request)
