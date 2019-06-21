@@ -43,13 +43,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security.Authentication
             }
 
             token = values.First();
+            _logger.LogInformation($"ArmAuthenticationHandler token = {token}");
 
             try
             {
                 if (!SimpleWebTokenHelper.ValidateToken(token, Clock))
                 {
+                    _logger.LogInformation($"ArmAuthenticationHandler token = {token} - Failed");
                     return AuthenticateResult.Fail("Token validation failed.");
                 }
+                _logger.LogInformation($"ArmAuthenticationHandler token = {token} - Succeeded");
 
                 var claims = new List<Claim>
                 {

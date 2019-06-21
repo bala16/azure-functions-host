@@ -98,13 +98,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
 
         public static bool ValidateToken(string token, ISystemClock systemClock)
         {
+            var keyName = string.Empty;
+
             // Use WebSiteAuthEncryptionKey if available else fallback to ContainerEncryptionKey.
             // Until the container is specialized to a specific site WebSiteAuthEncryptionKey will not be available.
             byte[] key;
             if (!TryGetEncryptionKey(EnvironmentSettingNames.WebSiteAuthEncryptionKey, out key, false))
             {
-                TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key);
+                if (TryGetEncryptionKey(EnvironmentSettingNames.ContainerEncryptionKey, out key))
+                {
+                    keyName = EnvironmentSettingNames.ContainerEncryptionKey;
+                }
             }
+            else
+            {
+                keyName = EnvironmentSettingNames.WebSiteAuthEncryptionKey;
+            }
+
+            Console.WriteLine($"Validating {token} using {keyName} value {key}");
 
             var data = Decrypt(key, token);
 
@@ -116,7 +127,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
                  // [["key1", "value1"], ["key2", "value2"]]
                  .ToDictionary(k => k[0], v => v[1]);
 
-            return parsedToken.ContainsKey("exp") && systemClock.UtcNow.UtcDateTime < new DateTime(long.Parse(parsedToken["exp"]));
+            var validateToken = parsedToken.ContainsKey("exp") && systemClock.UtcNow.UtcDateTime < new DateTime(long.Parse(parsedToken["exp"]));
+
+            Console.WriteLine($"Validating {token} using {keyName} value {key} validateresult {validateToken}");
+
+            return validateToken;
         }
 
         private static string GetSHA256Base64String(byte[] key)
