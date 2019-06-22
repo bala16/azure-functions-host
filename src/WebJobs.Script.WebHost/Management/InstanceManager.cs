@@ -59,10 +59,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                     _logger.LogDebug($"Specializing sidecar at {address}");
 
-                    if (string.IsNullOrEmpty(context.MSIContext.SiteName))
-                    {
-                        context.MSIContext.SiteName = context.SiteName;
-                    }
+//                    if (string.IsNullOrEmpty(context.MSIContext.SiteName))
+//                    {
+//                        context.MSIContext.SiteName = context.SiteName;
+//                    }
 
                     var requestMessage = new HttpRequestMessage(HttpMethod.Post, address)
                     {
