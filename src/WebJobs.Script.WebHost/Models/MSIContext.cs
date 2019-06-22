@@ -7,7 +7,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
 {
     public class MSIContext
     {
-//        public string SiteName { get; set; }
+        public string SiteName { get; set; }
 
         public string MSISecret { get; set; }
 
