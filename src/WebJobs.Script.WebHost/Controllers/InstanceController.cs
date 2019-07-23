@@ -65,5 +65,19 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             return Ok(_instanceManager.GetInstanceInfo());
         }
+
+        [HttpGet]
+        [Route("admin/instance/info2")]
+        public IActionResult GetInstanceInfo2()
+        {
+            return Ok(_instanceManager.GetInstanceInfo());
+        }
+
+        [HttpGet]
+        [Route("admin/instance/image")]
+        public string GetImage()
+        {
+            return "mesh";
+        }
     }
 }
