@@ -360,7 +360,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         {
             return new Dictionary<string, string>
             {
-                { "FUNCTIONS_EXTENSION_VERSION", ScriptHost.Version },
+                { "FUNCTIONS_EXTENSION_VERSION", "2.0-python" },
                 { "WEBSITE_NODE_DEFAULT_VERSION", "8.5.0" }
             };
         }
