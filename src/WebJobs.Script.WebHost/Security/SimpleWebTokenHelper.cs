@@ -54,34 +54,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
 
         public static string Decrypt(byte[] encryptionKey, string value)
         {
-            var parts = value.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 2 && parts.Length != 3)
-            {
-                throw new InvalidOperationException("Malformed token.");
-            }
-
-            var iv = Convert.FromBase64String(parts[0]);
-            var data = Convert.FromBase64String(parts[1]);
-            var base64KeyHash = parts.Length == 3 ? parts[2] : null;
-
-            if (!string.IsNullOrEmpty(base64KeyHash) && !string.Equals(GetSHA256Base64String(encryptionKey), base64KeyHash))
-            {
-                throw new InvalidOperationException(string.Format("Key with hash {0} does not exist.", base64KeyHash));
-            }
-
-            using (var aes = new AesManaged { Key = encryptionKey })
-            {
-                using (var ms = new MemoryStream())
-                {
-                    using (var cs = new CryptoStream(ms, aes.CreateDecryptor(aes.Key, iv), CryptoStreamMode.Write))
-                    using (var binaryWriter = new BinaryWriter(cs))
-                    {
-                        binaryWriter.Write(data, 0, data.Length);
-                    }
-
-                    return Encoding.UTF8.GetString(ms.ToArray());
-                }
-            }
+            throw new InvalidOperationException(string.Format("Key with hash {0} does not exist.", "ABCD"));
         }
 
         public static bool TryValidateToken(string token, ISystemClock systemClock)
