@@ -203,6 +203,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Decription keys hashes: {0}.
+        /// </summary>
+        internal static string TraceEncryptionKeyHashes {
+            get {
+                return ResourceManager.GetString("TraceEncryptionKeyHashes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Function (&apos;{0}&apos;) secrets do not exist. Generating secrets..
         /// </summary>
         internal static string TraceFunctionSecretGeneration {
