@@ -267,6 +267,9 @@
   <data name="TraceAddOrUpdateFunctionSecret" xml:space="preserve">
     <value>{0} secret '{1}' for '{2}' {3}.</value>
   </data>
+  <data name="TraceEncryptionKeyHashes" xml:space="preserve">
+    <value>Decription keys hashes: {0}</value>
+  </data>
   <data name="TraceFunctionSecretGeneration" xml:space="preserve">
     <value>Function ('{0}') secrets do not exist. Generating secrets.</value>
   </data>
