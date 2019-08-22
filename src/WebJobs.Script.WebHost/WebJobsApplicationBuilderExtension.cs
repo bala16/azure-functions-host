@@ -26,7 +26,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             IOptionsMonitor<StandbyOptions> standbyOptions = builder.ApplicationServices.GetService<IOptionsMonitor<StandbyOptions>>();
 
             builder.UseMiddleware<SystemTraceMiddleware>();
-            builder.UseMiddleware<HostnameFixupMiddleware>();
+
+            // Mitigation for a bug in frontend where wrong hostname can be sent to the container.
+            // We do not have slot support for Linux containers yet, so this middleware is not critical.
+            if (!environment.IsLinuxContainerEnvironment())
+            {
+                builder.UseMiddleware<HostnameFixupMiddleware>();
+            }
+
             builder.UseMiddleware<EnvironmentReadyCheckMiddleware>();
 
             if (standbyOptions.CurrentValue.InStandbyMode)
