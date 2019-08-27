@@ -73,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             if (!string.IsNullOrEmpty(hostNameHeaderValue) &&
                 string.Compare(Value, hostNameHeaderValue) != 0)
             {
-                if (_environment.IsLinuxAppServiceEnvironment())
+                if (_environment.IsLinuxContainerEnvironment())
                 {
                     // 2 cases
                     // 1 . container hasn't been specialized yet
