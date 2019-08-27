@@ -38,7 +38,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         {
             get
             {
-                _logger.LogInformation("Current HostNameProvider Value = " + _hostName);
                 if (string.IsNullOrEmpty(_hostName))
                 {
                     // default to the the value specified in environment
@@ -60,15 +59,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public virtual void Synchronize(HttpRequest request)
         {
-            _logger.LogInformation("synchronize Host " + request.Host + " DisplayUrl " + request.GetDisplayUrl());
-
-            string runtimeSiteName = _environment.GetEnvironmentVariable(EnvironmentSettingNames.RuntimeSiteName);
+            _logger.LogInformation("synchronize1 Host " + request.Host + " DisplayUrl " + request.GetDisplayUrl());
 
             string hostNameHeaderValue = request.Headers[ScriptConstants.AntaresDefaultHostNameHeader];
-            _logger.LogInformation("synchronize hostNameHeaderValue = " + hostNameHeaderValue + " value = " + Value + " runtimeSiteName " + runtimeSiteName);
-
             string siteDeploymentId = request.Headers[ScriptConstants.AntaresSiteDeploymentId];
-            _logger.LogInformation("synchronize SiteDeploymentId = " + siteDeploymentId + " value " + Value + " runtimeSiteName " + runtimeSiteName);
+            string runtimeSiteName = Environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteName);
+            _logger.LogInformation("synchronize2 hostNameHeaderValue = " + hostNameHeaderValue + " siteDeploymentId " +
+                                   siteDeploymentId + " runtimeSiteName " + runtimeSiteName + " value = " + Value);
 
             if (!string.IsNullOrEmpty(hostNameHeaderValue) &&
                 string.Compare(Value, hostNameHeaderValue) != 0)

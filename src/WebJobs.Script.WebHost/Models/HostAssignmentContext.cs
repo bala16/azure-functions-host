@@ -85,9 +85,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
                 logger.LogInformation("ApplyAppSettings " + pair.Key + " " + pair.Value);
                 environment.SetEnvironmentVariable(pair.Key, pair.Value);
             }
-
-            logger.LogInformation("ApplyAppSettings2 " + EnvironmentSettingNames.RuntimeSiteName + " " + SiteName);
-            environment.SetEnvironmentVariable(EnvironmentSettingNames.RuntimeSiteName, SiteName);
         }
     }
 }
