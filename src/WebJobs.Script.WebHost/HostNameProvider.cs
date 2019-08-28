@@ -38,6 +38,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 {
                     // default to the the value specified in environment
                     _hostName = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHostName);
+                    _logger.LogInformation("Setting hostname = ", _hostName);
+
                     if (string.IsNullOrEmpty(_hostName))
                     {
                         // Linux Dedicated on AppService doesn't have WEBSITE_HOSTNAME
@@ -82,6 +84,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                         _logger.LogInformation("HostName updated from '{0}' to '{1}'", Value, hostNameHeaderValue);
                         _hostName = hostNameHeaderValue;
                     }
+            }
+            else if (string.IsNullOrEmpty(hostNameHeaderValue))
+            {
+                _logger.LogInformation("string.IsNullOrEmpty(hostNameHeaderValue)");
+            }
+            else
+            {
+                _logger.LogInformation("Now hostNameHeaderValue = " + hostNameHeaderValue);
             }
         }
 
