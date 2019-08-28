@@ -60,6 +60,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             {
                     if (string.Compare(Value, hostNameHeaderValue) != 0)
                     {
+                        // Restrict this to Linux consumption for now.
+                        if (_environment.IsLinuxContainerEnvironment())
+                        {
+                            string runtimeSiteName = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteName);
+                            string siteDeploymentId = request.Headers[ScriptConstants.AntaresSiteDeploymentId];
+
+                            // There are 2 scenarios the hostname shouldn't be updated.
+                            // 1. current container hasn't been specialized yet and the incoming request is for a specific site.
+                            // 2. current container is already assigned to a site and the incoming request is for a different site.
+
+                            if (string.IsNullOrEmpty(runtimeSiteName) ||
+                                !string.Equals(runtimeSiteName, siteDeploymentId, StringComparison.OrdinalIgnoreCase))
+                            {
+                                _logger.LogInformation("Skip update HostName from '{0}' to '{1}' CurrentRuntimeSite '{2}' DeploymentId '{3}'", Value, hostNameHeaderValue, runtimeSiteName, siteDeploymentId);
+                                return;
+                            }
+                        }
+
                         _logger.LogInformation("HostName updated from '{0}' to '{1}'", Value, hostNameHeaderValue);
                         _hostName = hostNameHeaderValue;
                     }
