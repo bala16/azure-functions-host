@@ -48,6 +48,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                         }
                     }
                 }
+                _logger.LogInformation("Current hostname = ", _hostName);
                 return _hostName;
             }
         }
