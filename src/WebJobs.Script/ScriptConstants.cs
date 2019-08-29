@@ -79,6 +79,7 @@ namespace Microsoft.Azure.WebJobs.Script
 
         public const string FunctionsUserAgent = "AzureFunctionsRuntime";
         public const string AntaresDefaultHostNameHeader = "WAS-DEFAULT-HOSTNAME";
+        public const string AntaresSiteDeploymentId = "X-SITE-DEPLOYMENT-ID";
         public const string AntaresLogIdHeaderName = "X-ARR-LOG-ID";
         public const string AntaresScaleOutHeaderName = "X-FUNCTION-SCALEOUT";
         public const string AntaresColdStartHeaderName = "X-MS-COLDSTART";

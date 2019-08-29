@@ -26,8 +26,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             IOptionsMonitor<StandbyOptions> standbyOptions = builder.ApplicationServices.GetService<IOptionsMonitor<StandbyOptions>>();
 
             builder.UseMiddleware<SystemTraceMiddleware>();
-            builder.UseMiddleware<HostnameFixupMiddleware>();
-            builder.UseMiddleware<EnvironmentReadyCheckMiddleware>();
+
+            if (environment.IsLinuxContainerEnvironment())
+            {
+                builder.UseMiddleware<EnvironmentReadyCheckMiddleware>();
+
+                // We rely on specialization context to validate current worker. So WorkerValidationMiddleware comes behind EnvironmentReadyCheckMiddleware
+                builder.UseWhen(context => !context.Request.IsAdminRequest(), config =>
+                {
+                    config.UseMiddleware<WorkerValidationMiddleware>();
+                });
+
+                // HostnameFixupMiddleware is added after WorkerValidationMiddleware to avoid incorrect updates to hostname
+                builder.UseMiddleware<HostnameFixupMiddleware>();
+            }
+            else
+            {
+                builder.UseMiddleware<HostnameFixupMiddleware>();
+                builder.UseMiddleware<EnvironmentReadyCheckMiddleware>();
+            }
 
             if (standbyOptions.CurrentValue.InStandbyMode)
             {
