@@ -48,10 +48,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             return false;
         }
 
+        private static bool ShouldFail(HttpRequest request)
+        {
+            return request.GetDisplayUrl().Contains("fail", StringComparison.OrdinalIgnoreCase);
+        }
+
         public async Task Invoke(HttpContext context)
         {
             Console.WriteLine("In WorkerValidationMiddleware");
-            if (IsWrongWorker(context.Request))
+            if (IsWrongWorker(context.Request) || ShouldFail(context.Request))
             {
                 _logger.LogInformation("Short circuiting request for " + context.Request.GetDisplayUrl());
                 using (var writer = new StreamWriter(context.Response.Body))
