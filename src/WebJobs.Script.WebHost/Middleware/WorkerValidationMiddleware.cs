@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -52,7 +53,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             if (IsWrongWorker(context.Request))
             {
                 _logger.LogInformation("Short circuiting request for " + context.Request.GetDisplayUrl());
-                context.Response.Headers.Add("X-INVALIDATE-CACHE", "1");
+                using (var writer = new StreamWriter(context.Response.Body))
+                {
+                    context.Response.Headers.Add("X-INVALIDATE-CACHE", "1");
+                    context.Response.StatusCode = 503;
+                    await writer.WriteAsync(string.Empty);
+                }
             }
             else
             {

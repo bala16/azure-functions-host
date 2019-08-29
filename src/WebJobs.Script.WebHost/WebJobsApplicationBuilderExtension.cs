@@ -29,14 +29,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             if (environment.IsLinuxContainerEnvironment())
             {
+                Console.WriteLine("Add EnvironmentReadyCheckMiddleware");
                 builder.UseMiddleware<EnvironmentReadyCheckMiddleware>();
 
+                Console.WriteLine("Add WorkerValidationMiddleware");
                 // We rely on specialization context to validate current worker. So WorkerValidationMiddleware comes behind EnvironmentReadyCheckMiddleware
                 builder.UseWhen(context => !context.Request.IsAdminRequest(), config =>
                 {
                     config.UseMiddleware<WorkerValidationMiddleware>();
                 });
 
+                Console.WriteLine("Add HostnameFixupMiddleware");
                 // HostnameFixupMiddleware is added after WorkerValidationMiddleware to avoid incorrect updates to hostname
                 builder.UseMiddleware<HostnameFixupMiddleware>();
             }
