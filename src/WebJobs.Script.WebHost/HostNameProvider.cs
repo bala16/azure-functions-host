@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
             else
             {
-                _logger.LogInformation("Now hostNameHeaderValue = " + hostNameHeaderValue);
+                _logger.LogInformation("Now hostNameHeaderValue = " + hostNameHeaderValue + " Value = " + Value);
             }
         }
 
