@@ -51,15 +51,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             if (standbyOptions.CurrentValue.InStandbyMode)
             {
+                Console.WriteLine("Add PlaceholderSpecializationMiddleware");
                 builder.UseMiddleware<PlaceholderSpecializationMiddleware>();
             }
 
             // This middleware must be registered before we establish the request service provider.
             builder.UseWhen(context => !context.Request.IsAdminRequest(), config =>
             {
+                Console.WriteLine("Add HostAvailabilityCheckMiddleware");
                 config.UseMiddleware<HostAvailabilityCheckMiddleware>();
             });
 
+            Console.WriteLine("Add HostWarmupMiddleware");
             builder.UseMiddleware<HostWarmupMiddleware>();
 
             // This middleware must be registered before any other middleware depending on

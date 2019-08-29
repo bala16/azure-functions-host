@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -26,6 +27,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
         public async Task Invoke(HttpContext httpContext)
         {
+            Console.WriteLine("Add HostWarmupMiddleware");
             if (IsWarmUpRequest(httpContext.Request, _webHostEnvironment, _environment))
             {
                 await WarmUp(httpContext.Request);

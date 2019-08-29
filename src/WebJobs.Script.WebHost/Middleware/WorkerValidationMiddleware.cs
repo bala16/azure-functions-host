@@ -39,7 +39,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
                 if (string.IsNullOrEmpty(runtimeSiteName) ||
                     !string.Equals(runtimeSiteName, siteDeploymentId, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning("Request for site {0} sent to container specialized for site {1}",
+                    _logger.LogWarning("Request for site {0} received by container specialized for site {1}",
                         siteDeploymentId, runtimeSiteName);
                     return true;
                 }
@@ -50,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
         public async Task Invoke(HttpContext context)
         {
+            Console.WriteLine("In WorkerValidationMiddleware");
             if (IsWrongWorker(context.Request))
             {
                 _logger.LogInformation("Short circuiting request for " + context.Request.GetDisplayUrl());
