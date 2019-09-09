@@ -24,6 +24,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
         [JsonProperty("MSISpecializationPayload")]
         public MSIContext MSIContext { get; set; }
 
+        [JsonProperty("CorsSettings")]
+        public CorsSettings CorsSettings { get; set; }
+
         public long? PackageContentLength { get; set; }
 
         public string AzureFilesConnectionString

@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -40,6 +41,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             var assignmentContext = encryptedAssignmentContext.IsWarmup
                 ? null
                 : encryptedAssignmentContext.Decrypt(containerKey);
+
+            if (assignmentContext == null)
+            {
+                _logger.LogInformation("Assignment context: NULL");
+            }
+            else
+            {
+                _logger.LogInformation("Assignment context: " + JsonConvert.SerializeObject(assignmentContext));
+            }
 
             // before starting the assignment we want to perform as much
             // up front validation on the context as possible
