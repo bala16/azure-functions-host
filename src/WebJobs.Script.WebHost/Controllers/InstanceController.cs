@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -42,13 +43,29 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 ? null
                 : encryptedAssignmentContext.Decrypt(containerKey);
 
-            if (assignmentContext == null)
+            _logger.LogInformation("Logging Assignment context:");
+            _logger.LogDebug("Logging Assignment context:");
+
+            try
             {
-                _logger.LogInformation("Assignment context: NULL");
+                if (assignmentContext == null)
+                {
+                    _logger.LogInformation("Assignment context: NULL");
+                    _logger.LogDebug("Assignment context: NULL");
+                }
+                else
+                {
+                    _logger.LogInformation("Assignment context: NOT NULL");
+                    _logger.LogDebug("Assignment context: NOT NULL");
+
+                    _logger.LogInformation("Assignment context: " + JsonConvert.SerializeObject(assignmentContext));
+                    _logger.LogDebug("Assignment context: " + JsonConvert.SerializeObject(assignmentContext));
+                }
             }
-            else
+            catch (Exception e)
             {
-                _logger.LogInformation("Assignment context: " + JsonConvert.SerializeObject(assignmentContext));
+                _logger.LogInformation(e.ToString());
+                _logger.LogDebug(e.ToString());
             }
 
             // before starting the assignment we want to perform as much
