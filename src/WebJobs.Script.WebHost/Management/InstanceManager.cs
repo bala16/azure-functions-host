@@ -258,6 +258,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _logger.LogInformation($"Applying {assignmentContext.Environment.Count} app setting(s)");
             assignmentContext.ApplyAppSettings(_environment);
 
+            var corsSettings = assignmentContext.CorsSettings;
+
+            if (corsSettings == null)
+            {
+                _logger.LogInformation($"TEST: corsSettings == null");
+            }
+            else
+            {
+                _logger.LogInformation($"TEST: SupportCredentials = {corsSettings.SupportCredentials}");
+                var corsSettingsAllowedOrigins = corsSettings.AllowedOrigins;
+                _logger.LogInformation($"TEST: corsSettingsAllowedOriginsCount = {corsSettingsAllowedOrigins.Count()}");
+                var allOrigins = string.Join(",", corsSettingsAllowedOrigins);
+                _logger.LogInformation($"TEST: allOrigins = {allOrigins}");
+            }
+
             // We need to get the non-PlaceholderMode script Path so we can unzip to the correct location.
             // This asks the factory to skip the PlaceholderMode check when configuring options.
             var options = _optionsFactory.Create(ScriptApplicationHostOptionsSetup.SkipPlaceholder);
