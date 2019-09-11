@@ -58,8 +58,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     _logger.LogInformation("Assignment context: NOT NULL");
                     _logger.LogDebug("Assignment context: NOT NULL");
 
-                    _logger.LogInformation("Assignment context: " + JsonConvert.SerializeObject(assignmentContext));
-                    _logger.LogDebug("Assignment context: " + JsonConvert.SerializeObject(assignmentContext));
+                    var serializeObject = JsonConvert.SerializeObject(assignmentContext);
+                    _logger.LogInformation("Assignment context: len" + serializeObject.Length);
+                    _logger.LogDebug("Assignment context: len " + serializeObject.Length);
+                    _logger.LogInformation("Assignment context: " + serializeObject);
+                    _logger.LogDebug("Assignment context: " + serializeObject);
                 }
             }
             catch (Exception e)
