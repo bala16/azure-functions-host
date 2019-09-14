@@ -75,11 +75,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 {
                     _logger.LogDebug("Initiating background SyncTriggers operation");
                     await _functionsSyncManager.TrySyncTriggersAsync(checkHash: true);
+                    _logger.LogDebug("Done synctriggers");
                 }
             }
             catch (Exception exc) when (!exc.IsFatal())
             {
-                // failures are already logged in the sync triggers call
+                    _logger.LogDebug("failed synctriggers " + exc.ToString());
+
+                    // failures are already logged in the sync triggers call
                 // we need to suppress background exceptions from the timer thread
             }
         }

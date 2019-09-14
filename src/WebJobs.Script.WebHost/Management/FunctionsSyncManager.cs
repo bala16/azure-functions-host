@@ -80,6 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             {
                 result.Success = false;
                 result.Error = "Invalid environment for SyncTriggers operation.";
+                _logger.LogDebug("A Invalid environment for SyncTriggers operation.");
                 _logger.LogWarning(result.Error);
                 return result;
             }
@@ -87,6 +88,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             try
             {
                 await _syncSemaphore.WaitAsync();
+                _logger.LogDebug("A Waited");
 
                 var hashBlob = await GetHashBlobAsync();
                 if (checkHash && hashBlob == null)
@@ -94,6 +96,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                     // short circuit before doing any work in cases where
                     // we're asked to check/update hash but don't have
                     // storage access
+                    _logger.LogDebug("A shortcircuit");
+
                     return result;
                 }
 
@@ -101,17 +105,27 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                 bool shouldSyncTriggers = true;
                 string newHash = null;
+
+                _logger.LogDebug("A checkHash"+ checkHash);
+
+
                 if (checkHash)
                 {
                     newHash = await CheckHashAsync(hashBlob, json);
+                    _logger.LogDebug("A newhashed" + checkHash);
+
                     shouldSyncTriggers = newHash != null;
                 }
+
+                _logger.LogDebug("A shouldSyncTriggers" + shouldSyncTriggers);
 
                 if (shouldSyncTriggers)
                 {
                     var (success, error) = await SetTriggersAsync(json);
                     if (success && newHash != null)
                     {
+                        _logger.LogDebug("A UpdateHashAsync");
+
                         await UpdateHashAsync(hashBlob, newHash);
                     }
                     result.Success = success;
@@ -124,6 +138,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 result.Success = false;
                 result.Error = "SyncTriggers operation failed.";
                 _logger.LogError(ex, result.Error);
+                _logger.LogDebug("A SyncTriggers operation failed." + ex);
+
             }
             finally
             {
@@ -183,6 +199,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                         .ToString();
                 }
 
+                _logger.LogDebug("Done currentHash.len" + currentHash.Length);
+
                 // get the last hash value if present
                 string lastHash = null;
                 if (await hashBlob.ExistsAsync())
@@ -201,7 +219,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             catch (Exception ex)
             {
                 // best effort
-                _logger.LogError(ex, "Error checking SyncTriggers hash");
+                _logger.LogError(ex, "A Error checking SyncTriggers hash");
             }
 
             // if the last and current hash values are the same,
@@ -423,6 +441,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         // of triggers. It'll verify app ownership using a SWT token valid for 5 minutes. It should be plenty.
         private async Task<(bool, string)> SetTriggersAsync(string content)
         {
+            _logger.LogDebug("A SetTriggersAsync");
+
             var token = SimpleWebTokenHelper.CreateToken(DateTime.UtcNow.AddMinutes(5));
 
             string sanitizedContentString = content;
