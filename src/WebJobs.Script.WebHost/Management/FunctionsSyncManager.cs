@@ -106,8 +106,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 bool shouldSyncTriggers = true;
                 string newHash = null;
 
-                _logger.LogDebug("A checkHash"+ checkHash);
-
+                _logger.LogDebug("A checkHash" + checkHash);
 
                 if (checkHash)
                 {
@@ -139,7 +138,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 result.Error = "SyncTriggers operation failed.";
                 _logger.LogError(ex, result.Error);
                 _logger.LogDebug("A SyncTriggers operation failed." + ex);
-
             }
             finally
             {
