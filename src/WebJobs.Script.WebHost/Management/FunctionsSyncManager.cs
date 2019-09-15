@@ -251,12 +251,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                     CloudStorageAccount.TryParse(storageConnectionString, out account))
                 {
                     string hostId = await _hostIdProvider.GetHostIdAsync(CancellationToken.None);
+                    _logger.LogDebug("A hostid " + hostId);
+
                     CloudBlobClient blobClient = account.CreateCloudBlobClient();
                     var blobContainer = blobClient.GetContainerReference(ScriptConstants.AzureWebJobsHostsContainerName);
                     string hashBlobPath = $"synctriggers/{hostId}/last";
+                    _logger.LogDebug("A hashBlobPath " + hashBlobPath);
+
                     _hashBlob = blobContainer.GetBlockBlobReference(hashBlobPath);
+
+                    _logger.LogDebug("A _hashBlob1 " + _hashBlob);
+                }
+                else
+                {
+                    _logger.LogDebug("A no storageConnectionString");
                 }
             }
+
+            _logger.LogDebug("A _hashBlob2 " + _hashBlob);
+
             return _hashBlob;
         }
 
