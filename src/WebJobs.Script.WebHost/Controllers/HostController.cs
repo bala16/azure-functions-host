@@ -230,6 +230,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             }
             else if (desiredState == ScriptHostState.Offline && currentState != ScriptHostState.Offline)
             {
+                _logger.LogInformation("desiredState == ScriptHostState.Offline && currentState != ScriptHostState.Offline");
+
                 if (_environment.FileSystemIsReadOnly())
                 {
                     return BadRequest();
@@ -267,12 +269,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                     // we're currently online and the request is to take the host offline
                     await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
-                    break;
+                    return Accepted("1");
 
                 case "offline2":
                     // we're currently online and the request is to take the host offline
                     await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
-                    break;
+                    return Accepted("2");
             }
 
             return BadRequest("SetState2");

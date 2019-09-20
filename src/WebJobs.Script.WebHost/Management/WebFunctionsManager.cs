@@ -117,7 +117,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                 await functionMetadata
                     .Files
-                    .Select(e => FileUtility.WriteAsync(Path.Combine(functionDir, e.Key), e.Value))
+                    .Select(e => FileUtility.WriteAsync(Path.Combine(functionDir, e.Key), e.Value, null, null))
                     .WhenAll();
             }
 
@@ -137,13 +137,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             // Save the file and set changed flag is it has changed. This helps optimize the syncTriggers call
             if (newConfig != currentConfig)
             {
-                await FileUtility.WriteAsync(configPath, newConfig);
+                await FileUtility.WriteAsync(configPath, newConfig, null, null);
                 configChanged = true;
             }
 
             if (functionMetadata.TestData != null)
             {
-                await FileUtility.WriteAsync(dataFilePath, functionMetadata.TestData);
+                await FileUtility.WriteAsync(dataFilePath, functionMetadata.TestData, null, null);
             }
 
             // we need to sync triggers if config changed, or the files changed

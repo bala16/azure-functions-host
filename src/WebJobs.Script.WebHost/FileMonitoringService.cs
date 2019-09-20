@@ -292,7 +292,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
                 try
                 {
-                    await FileUtility.WriteAsync(path, content);
+                    await FileUtility.WriteAsync(path, content, logger);
                 }
                 catch (Exception e)
                 {

@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
 
             string filePath = GetSecretsSentinelFilePath(type, functionName);
-            await FileUtility.WriteAsync(filePath, DateTime.UtcNow.ToString());
+            await FileUtility.WriteAsync(filePath, DateTime.UtcNow.ToString(), null, null);
         }
 
         public override async Task WriteSnapshotAsync(ScriptSecretsType type, string functionName, ScriptSecrets secrets)

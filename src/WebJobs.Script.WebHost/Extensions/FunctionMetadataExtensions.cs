@@ -123,7 +123,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Extensions
             if (!File.Exists(testDataPath))
             {
                 FileUtility.EnsureDirectoryExists(Path.GetDirectoryName(testDataPath));
-                await FileUtility.WriteAsync(testDataPath, string.Empty);
+                await FileUtility.WriteAsync(testDataPath, string.Empty, null, null);
             }
 
             return await FileUtility.ReadAsync(testDataPath);

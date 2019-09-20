@@ -8,6 +8,7 @@ using System.IO.Abstractions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -63,8 +64,9 @@ namespace Microsoft.Azure.WebJobs.Script
             });
         }
 
-        public static async Task WriteAsync(string path, string contents, Encoding encoding = null)
+        public static async Task WriteAsync(string path, string contents, ILogger logger, Encoding encoding = null)
         {
+            logger?.LogInformation("ZX start WriteAsync");
             if (path == null)
             {
                 throw new ArgumentNullException(nameof(path));
@@ -77,22 +79,34 @@ namespace Microsoft.Azure.WebJobs.Script
 
             encoding = encoding ?? Encoding.UTF8;
 
+            logger?.LogInformation("ZX encoding = " + encoding);
+
             try
             {
                 await TryWrite();
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException d)
             {
+                logger?.LogInformation("DirectoryNotFoundException " + d);
                 EnsureDirectoryExists(Path.GetDirectoryName(path));
                 await TryWrite();
+            }
+            catch (Exception e)
+            {
+                logger?.LogInformation("Exception " + e);
+                throw;
             }
 
             async Task TryWrite()
             {
+                logger?.LogInformation("TryWrite");
+
                 using (Stream fileStream = OpenFile(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                 using (var writer = new StreamWriter(fileStream, encoding, 4096))
                 {
+                    logger?.LogInformation("TryWrite WriteAsync1");
                     await writer.WriteAsync(contents);
+                    logger?.LogInformation("TryWrite WriteAsync2");
                 }
             }
         }

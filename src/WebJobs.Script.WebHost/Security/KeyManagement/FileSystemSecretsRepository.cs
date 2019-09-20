@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             {
                 try
                 {
-                    await FileUtility.WriteAsync(filePath, ScriptSecretSerializer.SerializeSecrets(secrets));
+                    await FileUtility.WriteAsync(filePath, ScriptSecretSerializer.SerializeSecrets(secrets), null, null);
                     break;
                 }
                 catch (IOException)
@@ -92,7 +92,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         public override async Task WriteSnapshotAsync(ScriptSecretsType type, string functionName, ScriptSecrets secrets)
         {
             string filePath = GetSecretsFilePath(type, functionName, true);
-            await FileUtility.WriteAsync(filePath, ScriptSecretSerializer.SerializeSecrets(secrets));
+            await FileUtility.WriteAsync(filePath, ScriptSecretSerializer.SerializeSecrets(secrets), null, null);
         }
 
         public override async Task PurgeOldSecretsAsync(IList<string> currentFunctions, ILogger logger)

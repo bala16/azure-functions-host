@@ -89,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             await Task.WhenAll(setTasks);
 
             string filePath = GetSecretsSentinelFilePath(type, functionName);
-            await FileUtility.WriteAsync(filePath, DateTime.UtcNow.ToString());
+            await FileUtility.WriteAsync(filePath, DateTime.UtcNow.ToString(), null, null);
         }
 
         public override async Task PurgeOldSecretsAsync(IList<string> currentFunctions, ILogger logger)

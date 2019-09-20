@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             string jobPath = Path.Combine(GetJobBasePath(), $"{job.Id}.json");
             Directory.CreateDirectory(Path.GetDirectoryName(jobPath));
 
-            await FileUtility.WriteAsync(jobPath, JsonConvert.SerializeObject(job));
+            await FileUtility.WriteAsync(jobPath, JsonConvert.SerializeObject(job), null);
         }
 
         private string GetJobBasePath()

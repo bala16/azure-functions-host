@@ -366,7 +366,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Security
                 hostSecret.FunctionKeys = new List<Key> { };
 
                 var hostJson = JsonConvert.SerializeObject(hostSecret);
-                await FileUtility.WriteAsync(Path.Combine(directory.Path, ScriptConstants.HostMetadataFileName), hostJson);
+                await FileUtility.WriteAsync(Path.Combine(directory.Path, ScriptConstants.HostMetadataFileName), hostJson, null);
                 await AddOrUpdateFunctionSecrets_WithScope_UsesSecretandPersistsHostFile(HostKeyScopes.SystemKeys, h => h.SystemKeys, directory);
             }
         }

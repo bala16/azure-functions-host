@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
             string sentinelFilePath = GetSentinelFilePath(metadata.Name);
             FileUtility.EnsureDirectoryExists(Path.GetDirectoryName(sentinelFilePath));
-            await FileUtility.WriteAsync(sentinelFilePath, JsonConvert.SerializeObject(compilationResult));
+            await FileUtility.WriteAsync(sentinelFilePath, JsonConvert.SerializeObject(compilationResult), null, null);
         }
 
         private async Task<IJavaScriptCompilation> GetCompilationResultAsync(FunctionMetadata functionMetadata)
