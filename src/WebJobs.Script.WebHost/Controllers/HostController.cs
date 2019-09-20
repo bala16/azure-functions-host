@@ -231,6 +231,31 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return Accepted();
         }
 
+        [HttpPut]
+        [Route("admin/host/state2")]
+        public async Task<IActionResult> SetState2([FromBody] string state)
+        {
+            switch (state)
+            {
+                case "offline":
+                    if (_environment.FileSystemIsReadOnly())
+                    {
+                        return BadRequest("_environment.FileSystemIsReadOnly");
+                    }
+
+                    // we're currently online and the request is to take the host offline
+                    await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true);
+                    break;
+
+                case "offline2":
+                    // we're currently online and the request is to take the host offline
+                    await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true);
+                    break;
+            }
+
+            return BadRequest("SetState2");
+        }
+
         /// <summary>
         /// This endpoint generates a temporary x-ms-site-restricted-token for core tool
         /// to access KuduLite zipdeploy endpoint in Linux Consumption
