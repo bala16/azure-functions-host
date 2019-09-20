@@ -195,18 +195,26 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 !(desiredState == ScriptHostState.Offline || desiredState == ScriptHostState.Running))
             {
                 // currently we only allow states Offline and Running
+                _logger.LogInformation("ZX Parse failed");
                 return BadRequest();
             }
+
+            _logger.LogInformation("ZX Parse success");
+            _logger.LogInformation("ZX Parse success " + desiredState);
 
             var currentState = _scriptHostManager.State;
             if (desiredState == currentState)
             {
+                _logger.LogInformation("ZX desiredState == currentState");
                 return Ok();
             }
             else if (desiredState == ScriptHostState.Running && currentState == ScriptHostState.Offline)
             {
+                _logger.LogInformation("ZX desiredState == ScriptHostState.Running && currentState == ScriptHostState.Offline");
+
                 if (_environment.FileSystemIsReadOnly())
                 {
+                    _logger.LogInformation("ZX BadRequest");
                     return BadRequest();
                 }
 
