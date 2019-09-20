@@ -191,6 +191,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> SetState([FromBody] string state)
         {
+            _logger.LogInformation("ZX Input = " + state);
+
+            if (string.IsNullOrEmpty(state))
+            {
+                return BadRequest("Empty state");
+            }
+
             if (!Enum.TryParse<ScriptHostState>(state, ignoreCase: true, out ScriptHostState desiredState) ||
                 !(desiredState == ScriptHostState.Offline || desiredState == ScriptHostState.Running))
             {
@@ -243,6 +250,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/host/state2")]
         public async Task<IActionResult> SetState2([FromBody] string state)
         {
+            _logger.LogInformation("ZX Input = " + state);
+
+            if (string.IsNullOrEmpty(state))
+            {
+                return BadRequest("Empty state");
+            }
+
             switch (state)
             {
                 case "offline":
