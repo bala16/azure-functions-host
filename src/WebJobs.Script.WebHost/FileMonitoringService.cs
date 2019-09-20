@@ -10,6 +10,7 @@ using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity.UI.V3.Pages.Internal.Account;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Azure.WebJobs.Script.Eventing.File;
@@ -272,19 +273,36 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             Dispose(true);
         }
 
-        internal static async Task SetAppOfflineState(string rootPath, bool offline)
+        internal static async Task SetAppOfflineState(string rootPath, bool offline, ILogger logger)
         {
             string path = Path.Combine(rootPath, ScriptConstants.AppOfflineFileName);
+            logger?.LogInformation("ZX Path = " + path);
+
             bool offlineFileExists = File.Exists(path);
+            logger?.LogInformation("ZX offlineFileExists = " + offlineFileExists);
 
             if (offline && !offlineFileExists)
             {
+                logger?.LogInformation("ZX offline && !offlineFileExists");
+
                 // create the app_offline.htm file in the root script directory
                 string content = FileUtility.ReadResourceString($"{ScriptConstants.ResourcePath}.{ScriptConstants.AppOfflineFileName}");
-                await FileUtility.WriteAsync(path, content);
+
+                logger?.LogInformation("ZX content = " + content);
+
+                try
+                {
+                    await FileUtility.WriteAsync(path, content);
+                }
+                catch (Exception e)
+                {
+                    logger?.LogInformation("ZX exception = " + e.ToString());
+                    throw;
+                }
             }
             else if (!offline && offlineFileExists)
             {
+                logger?.LogInformation("ZX !offline && offlineFileExists");
                 // delete the app_offline.htm file
                 await Utility.InvokeWithRetriesAsync(() =>
                 {
@@ -293,6 +311,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                         File.Delete(path);
                     }
                 }, maxRetries: 3, retryInterval: TimeSpan.FromSeconds(1));
+            }
+            else
+            {
+                logger?.LogInformation("ZX else");
             }
         }
     }

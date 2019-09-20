@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
             if (postInstallActions.HasFlag(ExtensionPostInstallActions.BringAppOnline))
             {
-                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, false);
+                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, false, null);
             }
 
             await SaveJob(job);

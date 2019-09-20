@@ -226,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 }
 
                 // we're currently offline and the request is to bring the host back online
-                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, false);
+                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, false, _logger);
             }
             else if (desiredState == ScriptHostState.Offline && currentState != ScriptHostState.Offline)
             {
@@ -236,7 +236,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 }
 
                 // we're currently online and the request is to take the host offline
-                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true);
+                await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
             }
             else
             {
@@ -266,12 +266,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     }
 
                     // we're currently online and the request is to take the host offline
-                    await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true);
+                    await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
                     break;
 
                 case "offline2":
                     // we're currently online and the request is to take the host offline
-                    await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true);
+                    await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
                     break;
             }
 
