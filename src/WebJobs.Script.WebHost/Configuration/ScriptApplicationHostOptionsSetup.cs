@@ -4,7 +4,9 @@
 using System;
 using System.IO;
 using Microsoft.Azure.WebJobs.Script.Configuration;
+using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
@@ -28,13 +30,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
             _standbyOptionsOnChangeSubscription = _standbyOptions.OnChange(o => _cache.Clear());
         }
 
+        private static void Log(string message)
+        {
+            var containerName = Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName);
+            var linuxContainerEventGenerator = new LinuxContainerEventGenerator(containerName, "TestTenant", "TestStamp");
+            linuxContainerEventGenerator.LogFunctionTraceEvent(LogLevel.Information, string.Empty, string.Empty,
+                string.Empty, string.Empty, string.Empty, string.Empty, message, string.Empty, string.Empty,
+                string.Empty, string.Empty, string.Empty);
+        }
+
         public void Configure(ScriptApplicationHostOptions options)
         {
+            Log("XX Configure1");
             Configure(null, options);
         }
 
         public void Configure(string name, ScriptApplicationHostOptions options)
         {
+            Log("XX Configure2");
+
             _configuration.GetSection(ConfigurationSectionNames.WebHost)
                 ?.Bind(options);
 
@@ -44,9 +58,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
             // During assignment, we need a way to get the non-placeholder ScriptPath
             // while we are still in PlaceholderMode. This is a way for us to request it from the
             // OptionsFactory and still allow other setups to run.
-            if (_standbyOptions.CurrentValue.InStandbyMode &&
-                !string.Equals(name, SkipPlaceholder, StringComparison.Ordinal))
+            var currentValueInStandbyMode = _standbyOptions.CurrentValue.InStandbyMode &&
+                                            !string.Equals(name, SkipPlaceholder, StringComparison.Ordinal);
+            Log("XX Configure2 currentValueInStandbyMode " + currentValueInStandbyMode);
+
+            Log("XX Configure2 current script path " + options.ScriptPath);
+
+            if (currentValueInStandbyMode)
             {
+                Log("XX Setting temp paths ");
+
                 // If we're in standby mode, override relevant properties with values
                 // to be used by the placeholder site.
                 // Important that we use paths that are different than the configured paths
@@ -57,6 +78,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
                 options.ScriptPath = Path.Combine(tempRoot, @"functions\standby\wwwroot");
                 options.SecretsPath = Path.Combine(tempRoot, @"functions\standby\secrets");
                 options.IsSelfHost = options.IsSelfHost;
+            }
+            else
+            {
+                Log("XX NOT Setting temp paths ");
             }
         }
 

@@ -29,6 +29,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             _containerName = _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName)?.ToUpperInvariant();
         }
 
+        public LinuxContainerEventGenerator(string containerName, string tenantId, string stampName)
+        {
+            _containerName = containerName;
+            _tenantId = tenantId;
+            _stampName = stampName;
+        }
+
         // Note: the strange escaping of backslashes in these expressions for string literals (e.g. '\\\\\"') is because
         // of the current JSON serialization our log messages undergoe.
         public static string TraceEventRegex { get; } = $"{ScriptConstants.LinuxLogEventStreamName} (?<Level>[0-6]),(?<SubscriptionId>[^,]*),(?<AppName>[^,]*),(?<FunctionName>[^,]*),(?<EventName>[^,]*),(?<Source>[^,]*),\\\\\"(?<Details>.*)\\\\\",\\\\\"(?<Summary>.*)\\\\\",(?<HostVersion>[^,]*),(?<EventTimestamp>[^,]+),(?<ExceptionType>[^,]*),\\\\\"(?<ExceptionMessage>.*)\\\\\",(?<FunctionInvocationId>[^,]*),(?<HostInstanceId>[^,]*),(?<ActivityId>[^,\"]*),(?<ContainerName>[^,\"]*),(?<StampName>[^,\"]*),(?<TenantId>[^,\"]*)";
