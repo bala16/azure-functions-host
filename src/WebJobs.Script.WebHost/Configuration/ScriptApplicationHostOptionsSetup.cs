@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
         {
             var containerName = Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName);
             var linuxContainerEventGenerator = new LinuxContainerEventGenerator(containerName, "TestTenant", "TestStamp");
-            linuxContainerEventGenerator.LogFunctionTraceEvent(LogLevel.Information, string.Empty, string.Empty,
+            linuxContainerEventGenerator.LogFunctionTraceEvent2(LogLevel.Information, string.Empty, string.Empty,
                 string.Empty, string.Empty, string.Empty, string.Empty, message, string.Empty, string.Empty,
                 string.Empty, string.Empty, string.Empty);
         }
