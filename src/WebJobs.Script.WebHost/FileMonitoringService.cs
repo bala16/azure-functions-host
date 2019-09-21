@@ -249,7 +249,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         private void Shutdown()
         {
-            _scriptEnvironment.Shutdown();
+            _logger.LogInformation("XX FileMonitoringService Shutdown");
+            _scriptEnvironment.Shutdown(_logger);
         }
 
         protected virtual void Dispose(bool disposing)

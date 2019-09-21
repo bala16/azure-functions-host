@@ -21,12 +21,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
     {
         private readonly IEnvironment _environment;
         private readonly IInstanceManager _instanceManager;
+        private readonly IScriptJobHostEnvironment _scriptEnvironment;
         private readonly ILogger _logger;
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, IScriptJobHostEnvironment scriptEnvironment, ILoggerFactory loggerFactory)
         {
             _environment = environment;
             _instanceManager = instanceManager;
+            _scriptEnvironment = scriptEnvironment;
             _logger = loggerFactory.CreateLogger<InstanceController>();
         }
 
@@ -70,6 +72,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult GetInstanceInfo()
         {
             return Ok(_instanceManager.GetInstanceInfo());
+        }
+
+        [HttpPost]
+        [Route("admin/instance/shutdown")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public IActionResult Shutdown()
+        {
+            // idempotent and non reversible.
+            _logger.LogInformation("Shutdown request received");
+            _scriptEnvironment.Shutdown(_logger);
+            return Accepted();
         }
     }
 }

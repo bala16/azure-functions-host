@@ -323,7 +323,8 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
             else if (_jobHostLanguageWorkerChannelManager.GetChannels().Count() == 0)
             {
                 _logger.LogError("Exceeded language worker restart retry count for runtime:{runtime}. Shutting down Functions Host", runtime);
-                _scriptJobHostEnvironment.Shutdown();
+                _logger.LogInformation("XX FunctionDispatcher Shutdown");
+                _scriptJobHostEnvironment.Shutdown(_logger);
             }
         }
 

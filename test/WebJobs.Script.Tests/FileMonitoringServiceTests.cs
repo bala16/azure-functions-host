@@ -70,11 +70,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 // Test
                 if (expectShutdown)
                 {
-                    mockWebHostEnvironment.Verify(m => m.Shutdown());
+                    mockWebHostEnvironment.Verify(m => m.Shutdown(null));
                 }
                 else
                 {
-                    mockWebHostEnvironment.Verify(m => m.Shutdown(), Times.Never);
+                    mockWebHostEnvironment.Verify(m => m.Shutdown(null), Times.Never);
                 }
 
                 if (expectRestart)

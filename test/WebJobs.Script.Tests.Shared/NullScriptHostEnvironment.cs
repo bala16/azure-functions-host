@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Azure.WebJobs.Script;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
@@ -16,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
         }
 
-        public void Shutdown()
+        public void Shutdown(ILogger logger)
         {
         }
     }

@@ -48,14 +48,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             // Give the manager and all running tasks some time to shut down gracefully.
             //await Task.Delay(timeoutGracePeriod);
 
-            _jobHostEnvironment.Shutdown();
+            _logger.LogInformation("XX WebScriptHostExceptionHandler shutdown OnTimeoutExceptionAsync");
+            _jobHostEnvironment.Shutdown(_logger);
         }
 
         public Task OnUnhandledExceptionAsync(ExceptionDispatchInfo exceptionInfo)
         {
             LogErrorAndFlush("An unhandled exception has occurred. Host is shutting down.", exceptionInfo.SourceException);
+            _logger.LogInformation("XX WebScriptHostExceptionHandler shutdown OnUnhandledExceptionAsync");
 
-            _jobHostEnvironment.Shutdown();
+            _jobHostEnvironment.Shutdown(_logger);
             return Task.CompletedTask;
         }
 

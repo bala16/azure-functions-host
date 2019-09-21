@@ -382,7 +382,8 @@ namespace Microsoft.Azure.WebJobs.Script
 
         internal void Shutdown()
         {
-            _scriptHostEnvironment.Shutdown();
+            _logger.LogInformation("XX ScriptHost shutdown");
+            _scriptHostEnvironment.Shutdown(_logger);
         }
 
         private void OnHostLeaseChanged(object sender, EventArgs e)

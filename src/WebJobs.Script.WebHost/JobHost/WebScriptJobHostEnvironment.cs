@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using ExtensionsHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost
@@ -33,11 +34,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
         }
 
-        public void Shutdown()
+        public void Shutdown(ILogger logger)
         {
+            logger?.LogInformation("XX WebScriptJobHostEnvironment Shutdown");
+
             if (Interlocked.Exchange(ref _shutdownRequested, 1) == 0)
             {
+                logger?.LogInformation("XX WebScriptJobHostEnvironment Shutdown 1");
                 _applicationLifetime.StopApplication();
+            }
+            else
+            {
+                logger?.LogInformation("XX WebScriptJobHostEnvironment Shutdown 2");
             }
         }
     }

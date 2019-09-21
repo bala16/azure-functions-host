@@ -503,7 +503,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 // initiating shutdown
                 _logger.UnhealthyCountExceeded(_healthMonitorOptions.Value.HealthCheckThreshold, _healthMonitorOptions.Value.HealthCheckWindow);
                 var environment = _rootServiceProvider.GetService<IScriptJobHostEnvironment>();
-                environment.Shutdown();
+                _logger.LogInformation("XX WebJobsScriptHostService ShutdownHostIfUnhealthy");
+                environment.Shutdown(_logger);
                 return true;
             }
 

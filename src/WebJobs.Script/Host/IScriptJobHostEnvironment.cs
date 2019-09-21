@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -27,6 +28,7 @@ namespace Microsoft.Azure.WebJobs.Script
         /// <summary>
         /// Stops the <see cref="IScriptJobHost"/> and shuts down the hosting environment.
         /// </summary>
-        void Shutdown();
+        /// <param name="logger">Logs</param>
+        void Shutdown(ILogger logger);
     }
 }

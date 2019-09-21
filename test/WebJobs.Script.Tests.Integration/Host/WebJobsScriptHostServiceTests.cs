@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Host
             var wrappedHealthMonitorOptions = new OptionsWrapper<HostHealthMonitorOptions>(_healthMonitorOptions);
 
             _mockJobHostEnvironment = new Mock<IScriptJobHostEnvironment>(MockBehavior.Strict);
-            _mockJobHostEnvironment.Setup(p => p.Shutdown())
+            _mockJobHostEnvironment.Setup(p => p.Shutdown(null))
                 .Callback(() =>
                 {
                     _shutdownCalled = true;
@@ -137,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Host
             await TestHelpers.Await(() => _shutdownCalled);
 
             Assert.Equal(ScriptHostState.Error, _scriptHostService.State);
-            _mockJobHostEnvironment.Verify(p => p.Shutdown(), Times.Once);
+            _mockJobHostEnvironment.Verify(p => p.Shutdown(null), Times.Once);
 
             // we expect a few restart iterations
             var scriptHostLogMessages = _testHost.GetScriptHostLogMessages();
@@ -181,7 +181,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Host
                 return allLogs.Contains("Host initialization: ConsecutiveErrors=3");
             });
             Assert.Equal(ScriptHostState.Error, _scriptHostService.State);
-            _mockJobHostEnvironment.Verify(p => p.Shutdown(), Times.Never);
+            _mockJobHostEnvironment.Verify(p => p.Shutdown(null), Times.Never);
 
             // after a few retries, put the host back to health and verify
             // it starts successfully

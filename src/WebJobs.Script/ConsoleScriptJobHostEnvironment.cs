@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -23,8 +24,9 @@ namespace Microsoft.Azure.WebJobs.Script
             _applicationLifetime.StopApplication();
         }
 
-        public void Shutdown()
+        public void Shutdown(ILogger logger)
         {
+            logger?.LogInformation("XX ConsoleScriptJobHostEnvironment Shutdown");
             _applicationLifetime.StopApplication();
         }
     }
