@@ -520,8 +520,18 @@ namespace Microsoft.Azure.WebJobs.Script
             return false;
         }
 
-        public static bool CheckAppOffline(string scriptPath)
+        public static bool CheckAppOffline(IEnvironment environment, string scriptPath)
         {
+            if (environment.IsLinuxContainerEnvironment())
+            {
+                // No shared file system. Containers need to be marked offline individually.
+                var isContainerOffline = environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline);
+                if (!string.IsNullOrEmpty(isContainerOffline) && string.Equals("1", isContainerOffline, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
             // check if we should be in an offline state
             string offlineFilePath = Path.Combine(scriptPath, ScriptConstants.AppOfflineFileName);
             if (File.Exists(offlineFilePath))

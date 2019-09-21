@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
             _standbyOptionsOnChangeSubscription = _standbyOptions.OnChange(o => _cache.Clear());
         }
 
-        private static void Log(string message)
+        public static void Log(string message)
         {
             var containerName = Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName);
             var linuxContainerEventGenerator = new LinuxContainerEventGenerator(containerName, "TestTenant", "TestStamp");

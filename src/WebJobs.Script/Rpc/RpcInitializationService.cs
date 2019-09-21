@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
         {
             _logger.LogInformation("ZX RpcInitializationService StartAsync");
 
-            var checkAppOffline = Utility.CheckAppOffline(_applicationHostOptions.CurrentValue.ScriptPath);
+            var checkAppOffline = Utility.CheckAppOffline(_environment, _applicationHostOptions.CurrentValue.ScriptPath);
 
             _logger.LogInformation("ZX RpcInitializationService StartAsync checkAppOffline " + checkAppOffline +
                                    " _applicationHostOptions.CurrentValue.ScriptPath " +
