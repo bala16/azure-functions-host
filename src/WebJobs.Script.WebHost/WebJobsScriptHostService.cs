@@ -179,7 +179,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 }
 
                 bool isOffline = Utility.CheckAppOffline(_applicationHostOptions.CurrentValue.ScriptPath);
+                _logger.LogInformation("ZX UnsynchronizedStartHostAsync isOffline " + isOffline +
+                                       " _applicationHostOptions.CurrentValue.ScriptPath " +
+                                       _applicationHostOptions.CurrentValue.ScriptPath);
+
                 State = isOffline ? ScriptHostState.Offline : State;
+                _logger.LogInformation("ZX UnsynchronizedStartHostAsync State " + State);
+
                 bool hasNonTransientErrors = startupMode.HasFlag(JobHostStartupMode.HandlingNonTransientError);
 
                 // If we're in a non-transient error state or offline, skip host initialization

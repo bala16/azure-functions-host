@@ -25,8 +25,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
         public async Task Invoke(HttpContext httpContext, IScriptHostManager scriptHostManager)
         {
+            _logger.LogInformation("ZX HostAvailabilityCheckMiddleware Invoke start " + scriptHostManager.State);
             if (scriptHostManager.State != ScriptHostState.Offline)
             {
+                _logger.LogInformation("ZX HostAvailabilityCheckMiddleware Invoke start NOT offline");
                 using (Logger.VerifyingHostAvailabilityScope(_logger, httpContext.TraceIdentifier))
                 {
                     Logger.InitiatingHostAvailabilityCheck(_logger);
@@ -49,6 +51,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             }
             else
             {
+                _logger.LogInformation("ZX HostAvailabilityCheckMiddleware Invoke start YES offline");
                 await httpContext.SetOfflineResponseAsync(_applicationHostOptions.CurrentValue.ScriptPath);
             }
         }

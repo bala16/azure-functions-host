@@ -59,10 +59,20 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            if (Utility.CheckAppOffline(_applicationHostOptions.CurrentValue.ScriptPath))
+            _logger.LogInformation("ZX RpcInitializationService StartAsync");
+
+            var checkAppOffline = Utility.CheckAppOffline(_applicationHostOptions.CurrentValue.ScriptPath);
+
+            _logger.LogInformation("ZX RpcInitializationService StartAsync checkAppOffline " + checkAppOffline +
+                                   " _applicationHostOptions.CurrentValue.ScriptPath " +
+                                   _applicationHostOptions.CurrentValue.ScriptPath);
+
+            if (checkAppOffline)
             {
+                _logger.LogInformation("ZX RpcInitializationService StartAsync return");
                 return;
             }
+            _logger.LogInformation("ZX RpcInitializationService StartAsync continue");
             _logger.LogDebug("Starting Rpc Initialization Service.");
             await InitializeRpcServerAsync();
             await InitializeChannelsAsync();
