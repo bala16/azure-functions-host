@@ -89,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
                 _eventSubscriptions.Add(_eventManager.OfType<FileEvent>()
                         .Where(f => string.Equals(f.Source, EventSources.ScriptFiles, StringComparison.Ordinal))
-                        .Subscribe(e => OnFileChanged(e.FileChangeArguments)));
+                        .Subscribe(e => OnFileChanged(e.FileChangeArguments, _logger)));
 
                 _logger.LogDebug("File event source initialized.");
             }
@@ -122,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
         }
 
-        private void OnFileChanged(FileSystemEventArgs e)
+        private void OnFileChanged(FileSystemEventArgs e, ILogger logger)
         {
             // We will perform a host restart in the following cases:
             // - the file change was under one of the configured watched directories (e.g. node_modules, shared code directories, etc.)
@@ -139,10 +139,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             if (_scriptOptions.WatchDirectories.Contains(directory))
             {
+                logger?.LogInformation("ZX OnFileChanged _scriptOptions.WatchDirectories.Contains(directory)");
                 changeDescription = "Watched directory";
             }
             else if (string.Compare(fileName, ScriptConstants.AppOfflineFileName, StringComparison.OrdinalIgnoreCase) == 0)
             {
+                logger?.LogInformation("ZX OnFileChanged ScriptConstants.AppOfflineFileName");
+
                 // app_offline.htm has changed
                 // when app_offline.htm is created, we trigger
                 // a shutdown right away so when the host
@@ -160,17 +163,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 string.Compare(fileName, ScriptConstants.FunctionMetadataFileName, StringComparison.OrdinalIgnoreCase) == 0 ||
                 string.Compare(fileName, ScriptConstants.ProxyMetadataFileName, StringComparison.OrdinalIgnoreCase) == 0)
             {
+                logger?.LogInformation("ZX OnFileChanged FILE " + fileName);
                 changeDescription = "File";
             }
             else if ((e.ChangeType == WatcherChangeTypes.Deleted || Directory.Exists(e.FullPath))
                 && !_scriptOptions.RootScriptDirectorySnapshot.SequenceEqual(Directory.EnumerateDirectories(_scriptOptions.RootScriptPath)))
             {
                 // Check directory snapshot only if "Deleted" change or if directory changed
+                logger?.LogInformation("ZX OnFileChanged Directory " + e.FullPath);
+
                 changeDescription = "Directory";
             }
 
+            logger?.LogInformation("ZX OnFileChanged END ");
+
             if (!string.IsNullOrEmpty(changeDescription))
             {
+                logger?.LogInformation("ZX OnFileChanged yes changeDescription ");
+
                 string fileExtension = Path.GetExtension(fileName);
                 if (!string.IsNullOrEmpty(fileExtension) && ScriptConstants.AssemblyFileTypes.Contains(fileExtension, StringComparer.OrdinalIgnoreCase))
                 {
@@ -180,6 +190,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 TraceFileChangeRestart(changeDescription, e.ChangeType.ToString(), e.FullPath, shutdown);
                 ScheduleRestartAsync(shutdown).ContinueWith(t => _logger.LogError($"Error restarting host (full shutdown: {shutdown})", t.Exception),
                     TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted);
+            }
+            else
+            {
+                logger?.LogInformation("ZX OnFileChanged no changeDescription ");
             }
         }
 
