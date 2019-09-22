@@ -80,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult Shutdown()
         {
             // idempotent and non reversible.
-            _logger.LogInformation("Shutdown request received");
+            _logger.LogInformation("Shutdown request received " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
             _scriptEnvironment.Shutdown(_logger);
             // Mark the container offline so when the host restarts it will be put in offline mode.
             _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
