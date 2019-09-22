@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Extensions.Logging;
 using ExtensionsHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
 
@@ -28,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public void RestartHost()
         {
+            ScriptApplicationHostOptionsSetup.Log("XX RestartHostAsync");
             if (_shutdownRequested == 0 && Interlocked.Exchange(ref _restartRequested, 1) == 0)
             {
                 _hostManager.RestartHostAsync(CancellationToken.None);

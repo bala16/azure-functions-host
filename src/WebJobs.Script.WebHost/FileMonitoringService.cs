@@ -15,6 +15,7 @@ using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Azure.WebJobs.Script.Eventing.File;
 using Microsoft.Azure.WebJobs.Script.IO;
+using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -226,6 +227,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         private async Task ScheduleRestartAsync(bool shutdown)
         {
+            ScriptApplicationHostOptionsSetup.Log("XX ScheduleRestartAsync " + shutdown);
+
             if (shutdown)
             {
                 _shutdownScheduled = true;
