@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
 
             InstanceManager.Reset();
 
-            var instanceController = new InstanceController(environment, instanceManager, null, loggerFactory);
+            var instanceController = new InstanceController(environment, instanceManager, null, loggerFactory, null);
 
             const string containerEncryptionKey = "/a/vXvWJ3Hzgx4PFxlDUJJhQm5QVyGiu0NNLFm/ZMMg=";
             var hostAssignmentContext = new HostAssignmentContext

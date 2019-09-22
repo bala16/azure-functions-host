@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -22,13 +23,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IEnvironment _environment;
         private readonly IInstanceManager _instanceManager;
         private readonly IScriptJobHostEnvironment _scriptEnvironment;
+        private readonly IOptions<ScriptApplicationHostOptions> _applicationHostOptions;
         private readonly ILogger _logger;
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, IScriptJobHostEnvironment scriptEnvironment, ILoggerFactory loggerFactory)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, IScriptJobHostEnvironment scriptEnvironment, ILoggerFactory loggerFactory,
+        IOptions<ScriptApplicationHostOptions> applicationHostOptions)
         {
             _environment = environment;
             _instanceManager = instanceManager;
             _scriptEnvironment = scriptEnvironment;
+            _applicationHostOptions = applicationHostOptions;
             _logger = loggerFactory.CreateLogger<InstanceController>();
         }
 
@@ -77,13 +81,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [HttpPost]
         [Route("admin/instance/shutdown")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        public IActionResult Shutdown()
+        public async Task<IActionResult> Shutdown()
         {
             // idempotent and non reversible.
             _logger.LogInformation("Shutdown request received " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
+            _logger.LogInformation("Shutdown adding offline file at " + _applicationHostOptions.Value.ScriptPath);
+            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
             _scriptEnvironment.Shutdown(_logger);
             // Mark the container offline so when the host restarts it will be put in offline mode.
-            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
+//            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
+
             return Accepted();
         }
     }
