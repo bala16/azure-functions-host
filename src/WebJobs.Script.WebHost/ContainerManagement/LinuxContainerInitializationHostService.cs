@@ -36,7 +36,19 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             // The service should be registered in IsLinuxContainerEnvironment only. But do additional check here.
             if (_environment.IsLinuxContainerEnvironment())
             {
-                await ApplyContextIfPresent();
+                var environmentVariable = _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline);
+                _logger.LogInformation("XX LinuxContainerInitializationHostService ApplyContextIfPresent " +
+                                       environmentVariable +
+                                       "END");
+                if (string.Equals("1", environmentVariable, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("XX Return LinuxContainerInitializationHostService");
+                }
+                else
+                {
+                    _logger.LogInformation("XX LinuxContainerInitializationService Applying");
+                    await ApplyContextIfPresent();
+                }
             }
         }
 
