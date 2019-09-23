@@ -541,6 +541,17 @@ namespace Microsoft.Azure.WebJobs.Script
             return false;
         }
 
+        public static bool CheckAppOffline2(IEnvironment environment, string scriptPath)
+        {
+            // check if we should be in an offline state
+            string offlineFilePath = Path.Combine(scriptPath, ScriptConstants.AppOfflineFileName);
+            if (File.Exists(offlineFilePath))
+            {
+                return true;
+            }
+            return false;
+        }
+
         public static bool TryCleanUrl(string url, out string cleaned)
         {
             cleaned = null;

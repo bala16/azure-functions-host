@@ -79,23 +79,47 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         }
 
         [HttpPost]
-        [Route("admin/instance/shutdown")]
+        [Route("admin/instance/shutdownenv")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        public async Task<IActionResult> Shutdown()
+        public IActionResult Shutdown1([FromServices] IScriptHostManager hostManager)
         {
             // idempotent and non reversible.
             _logger.LogInformation("Shutdown request received " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
-            _logger.LogInformation("Shutdown adding offline file at " + _applicationHostOptions.Value.ScriptPath);
-            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+//            _logger.LogInformation("Shutdown adding offline file at " + _applicationHostOptions.Value.ScriptPath);
+//            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
             _logger.LogInformation("Setting EnvironmentSettingNames.ContainerOffline current value = " +
                                    _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
             _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
             _logger.LogInformation("Done Set EnvironmentSettingNames.ContainerOffline current value = " +
                                    _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
-            _scriptEnvironment.Shutdown(_logger);
+            //            _scriptEnvironment.Shutdown(_logger);
             // Mark the container offline so when the host restarts it will be put in offline mode.
 
-            return Accepted();
+            Task ignore = hostManager.RestartHostAsync();
+
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("admin/instance/shutdownfile")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public async Task<IActionResult> Shutdown2([FromServices] IScriptHostManager hostManager)
+        {
+            // idempotent and non reversible.
+            _logger.LogInformation("Shutdown request received " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
+            _logger.LogInformation("Shutdown adding offline file at " + _applicationHostOptions.Value.ScriptPath);
+            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+//            _logger.LogInformation("Setting EnvironmentSettingNames.ContainerOffline current value = " +
+//                                   _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
+//            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
+//            _logger.LogInformation("Done Set EnvironmentSettingNames.ContainerOffline current value = " +
+//                                   _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
+            //            _scriptEnvironment.Shutdown(_logger);
+            // Mark the container offline so when the host restarts it will be put in offline mode.
+
+            Task ignore = hostManager.RestartHostAsync();
+
+            return Ok();
         }
     }
 }

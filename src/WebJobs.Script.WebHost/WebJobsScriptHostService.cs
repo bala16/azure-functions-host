@@ -183,9 +183,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                                        _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + "END");
 
                 bool isOffline = Utility.CheckAppOffline(_environment, _applicationHostOptions.CurrentValue.ScriptPath);
+                bool isOffline2 = Utility.CheckAppOffline2(_environment, _applicationHostOptions.CurrentValue.ScriptPath);
+
                 _logger.LogInformation("ZX UnsynchronizedStartHostAsync isOffline " + isOffline +
                                        " _applicationHostOptions.CurrentValue.ScriptPath " +
-                                       _applicationHostOptions.CurrentValue.ScriptPath);
+                                       _applicationHostOptions.CurrentValue.ScriptPath + " isOffline2 " + isOffline2);
 
                 State = isOffline ? ScriptHostState.Offline : State;
                 _logger.LogInformation("ZX UnsynchronizedStartHostAsync State " + State);
