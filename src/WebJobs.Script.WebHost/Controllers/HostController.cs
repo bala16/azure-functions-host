@@ -176,8 +176,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [HttpPost]
         [Route("admin/host/restart")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        public IActionResult Restart([FromServices] IScriptHostManager hostManager)
+        public async Task<IActionResult> Restart([FromServices] IScriptHostManager hostManager)
         {
+            _logger.LogInformation("HostController.Restart setting appoffline file at " + _applicationHostOptions.Value.ScriptPath + " current value " +
+                                   _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + " END ");
+            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
             Task ignore = hostManager.RestartHostAsync();
             return Ok(_applicationHostOptions.Value);
         }
