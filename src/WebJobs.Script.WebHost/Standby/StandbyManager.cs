@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.WebJobs.Script.Rpc;
+using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Azure.WebJobs.Script.WebHost.Properties;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
@@ -139,6 +140,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             {
                 try
                 {
+                    ScriptApplicationHostOptionsSetup.Log("StandbyManager InitializeAsync " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + "END");
+
                     await CreateStandbyWarmupFunctions();
 
                     // start a background timer to identify when specialization happens

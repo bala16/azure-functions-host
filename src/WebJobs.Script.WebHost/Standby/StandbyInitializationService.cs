@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost
@@ -19,6 +20,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            ScriptApplicationHostOptionsSetup.Log("StandbyInitializationService StartAsync " + Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + "END");
             await _standbyManager.InitializeAsync();
         }
 

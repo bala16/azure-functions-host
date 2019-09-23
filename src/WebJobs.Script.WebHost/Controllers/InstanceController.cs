@@ -87,9 +87,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             _logger.LogInformation("Shutdown request received " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
             _logger.LogInformation("Shutdown adding offline file at " + _applicationHostOptions.Value.ScriptPath);
             await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+            _logger.LogInformation("Setting EnvironmentSettingNames.ContainerOffline current value = " +
+                                   _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
+            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
+            _logger.LogInformation("Done Set EnvironmentSettingNames.ContainerOffline current value = " +
+                                   _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline));
             _scriptEnvironment.Shutdown(_logger);
             // Mark the container offline so when the host restarts it will be put in offline mode.
-//            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
 
             return Accepted();
         }
