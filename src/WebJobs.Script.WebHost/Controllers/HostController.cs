@@ -189,6 +189,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return Ok(_applicationHostOptions.Value);
         }
 
+        [HttpPost]
+        [Route("admin/host/restart2")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public IActionResult Restart2([FromServices] IScriptHostManager hostManager)
+        {
+            _logger.LogInformation("HostController.Restart2 setting environment variable current value " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + " END ");
+            _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
+            _logger.LogInformation("HostController.Restart2 complete set environment variable current value " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + " END ");
+            Task ignore = hostManager.RestartHostAsync();
+            return Ok();
+        }
+
         /// <summary>
         /// Currently this endpoint only supports taking the host offline and bringing it back online.
         /// </summary>
