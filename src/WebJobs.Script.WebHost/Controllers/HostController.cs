@@ -44,6 +44,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IEnvironment _environment;
         private readonly IScriptHostManager _scriptHostManager;
         private readonly IFunctionsSyncManager _functionsSyncManager;
+        private readonly IScriptJobHostEnvironment _scriptEnvironment;
 
         public HostController(IOptions<ScriptApplicationHostOptions> applicationHostOptions,
             IOptions<JobHostOptions> hostOptions,
@@ -52,7 +53,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             IWebFunctionsManager functionsManager,
             IEnvironment environment,
             IScriptHostManager scriptHostManager,
-            IFunctionsSyncManager functionsSyncManager)
+            IFunctionsSyncManager functionsSyncManager,
+            IScriptJobHostEnvironment scriptEnvironment)
         {
             _applicationHostOptions = applicationHostOptions;
             _hostOptions = hostOptions;
@@ -62,6 +64,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             _environment = environment;
             _scriptHostManager = scriptHostManager;
             _functionsSyncManager = functionsSyncManager;
+            _scriptEnvironment = scriptEnvironment;
         }
 
         [HttpGet]
@@ -293,6 +296,31 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
             await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
             return Accepted("admin/host/state3");
+        }
+
+        [HttpPut]
+        [Route("admin/host/state4")]
+        public async Task<IActionResult> SetState4([FromBody] string state)
+        {
+            _logger.LogInformation("ZX setstate4 Input = " + state + " _applicationHostOptions.Value.ScriptPath " +
+                                   _applicationHostOptions.Value.ScriptPath);
+
+            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+            //FileMonitoringService.Shutdown();
+            _scriptEnvironment.RestartHost();
+            return Accepted("admin/host/state4");
+        }
+
+        [HttpPut]
+        [Route("admin/host/state5")]
+        public async Task<IActionResult> SetState5([FromServices] IScriptHostManager hostManager, [FromBody] string state)
+        {
+            _logger.LogInformation("ZX setstate5 Input = " + state + " _applicationHostOptions.Value.ScriptPath " +
+                                   _applicationHostOptions.Value.ScriptPath);
+
+            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+            Task ignore = hostManager.RestartHostAsync();
+            return Accepted("admin/host/state5");
         }
 
         /// <summary>

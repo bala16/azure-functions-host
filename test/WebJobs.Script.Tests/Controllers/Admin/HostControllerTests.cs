@@ -44,7 +44,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _mockScriptHostManager = new Mock<IScriptHostManager>(MockBehavior.Strict);
             _functionsSyncManager = new Mock<IFunctionsSyncManager>(MockBehavior.Strict);
 
-            _hostController = new HostController(optionsWrapper, hostOptions, loggerFactory, mockAuthorizationService.Object, mockWebFunctionsManager.Object, _mockEnvironment.Object, _mockScriptHostManager.Object, _functionsSyncManager.Object);
+            _hostController = new HostController(optionsWrapper, hostOptions, loggerFactory, mockAuthorizationService.Object, mockWebFunctionsManager.Object, _mockEnvironment.Object, _mockScriptHostManager.Object, _functionsSyncManager.Object, null);
 
             _appOfflineFilePath = Path.Combine(_scriptPath, ScriptConstants.AppOfflineFileName);
             if (File.Exists(_appOfflineFilePath))
