@@ -284,6 +284,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return BadRequest("SetState2");
         }
 
+        [HttpPut]
+        [Route("admin/host/state3")]
+        public async Task<IActionResult> SetState3([FromBody] string state)
+        {
+            _logger.LogInformation("ZX setstate3 Input = " + state + " _applicationHostOptions.Value.ScriptPath " +
+                                   _applicationHostOptions.Value.ScriptPath);
+
+            await FileMonitoringService.SetAppOfflineState(_applicationHostOptions.Value.ScriptPath, true, _logger);
+            return Accepted("admin/host/state3");
+        }
+
         /// <summary>
         /// This endpoint generates a temporary x-ms-site-restricted-token for core tool
         /// to access KuduLite zipdeploy endpoint in Linux Consumption
