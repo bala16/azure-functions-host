@@ -107,5 +107,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             _environment.SetEnvironmentVariable(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "0");
             _environment.SetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteContainerReady, "1");
         }
+
+        // Used to disable single instance of the site's worker in Linux container environment.
+        public void DisableContainer()
+        {
+        }
     }
 }
