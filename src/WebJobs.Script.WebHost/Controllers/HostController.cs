@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -218,6 +219,36 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 _logger.LogInformation("DISABLE FALSE");
             }
 
+            Task ignore = hostManager.RestartHostAsync();
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("admin/host/restart4")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public async Task<IActionResult> Restart4([FromServices] IScriptHostManager hostManager,
+            [FromServices] IEnumerable<IManagedHostedService> hostedServices, [FromQuery] bool disableContainer = false)
+        {
+            if (disableContainer)
+            {
+                _logger.LogInformation("DISABLE TRUE");
+                _logger.LogInformation("HostController.Restart4 setting environment variable current value " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + " END ");
+                _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline, "1");
+                _logger.LogInformation("HostController.Restart4 complete set environment variable current value " + _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerOffline) + " END ");
+            }
+            else
+            {
+                _logger.LogInformation("DISABLE FALSE");
+            }
+
+            _logger.LogInformation("Waiting for hostedmanagedservices " + hostedServices.Count());
+
+            foreach (var managedHostedService in hostedServices)
+            {
+                _logger.LogInformation("Service Name " + managedHostedService.GetType().FullName);
+            }
+
+            await Task.WhenAll(hostedServices.Select(s => s.OuterStopAsync(CancellationToken.None)));
             Task ignore = hostManager.RestartHostAsync();
             return Ok();
         }
