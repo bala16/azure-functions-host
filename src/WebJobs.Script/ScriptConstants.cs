@@ -73,6 +73,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string ProxyMetadataFileName = "proxies.json";
         public const string ExtensionsMetadataFileName = "extensions.json";
         public const string AppOfflineFileName = "app_offline.htm";
+        public const string DisableContainerFileName = "disableContainer";
         public const string ResourcePath = "Microsoft.Azure.WebJobs.Script.WebHost.Resources";
 
         public const string DefaultMasterKeyName = "master";

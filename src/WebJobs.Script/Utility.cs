@@ -520,15 +520,19 @@ namespace Microsoft.Azure.WebJobs.Script
             return false;
         }
 
-        public static bool CheckAppOffline(IEnvironment environment, string scriptPath)
+        public static bool CheckAppOffline(IEnvironment environment, string scriptPath, ILogger logger)
         {
             // For Linux container environments we have an additional way of putting a specific instance of worker offline.
             if (environment.IsLinuxContainerEnvironment())
             {
-                var environmentVariable = environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerDisabled);
-                if (string.Equals("1", environmentVariable, StringComparison.OrdinalIgnoreCase))
+                if (FileUtility.IsContainerDisabled(logger))
                 {
+                    logger.LogInformation("ZZ CheckAppOffline true");
                     return true;
+                }
+                else
+                {
+                    logger.LogInformation("ZZ CheckAppOffline false");
                 }
             }
 

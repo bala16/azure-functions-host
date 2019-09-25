@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var checkAppOffline = Utility.CheckAppOffline(_environment, _applicationHostOptions.CurrentValue.ScriptPath);
+            var checkAppOffline = Utility.CheckAppOffline(_environment, _applicationHostOptions.CurrentValue.ScriptPath, _logger);
             _logger.LogInformation("RpcInitializationService checkAppOffline " + checkAppOffline);
 
             if (checkAppOffline)
