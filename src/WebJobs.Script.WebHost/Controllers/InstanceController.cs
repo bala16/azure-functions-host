@@ -80,6 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             if (_environment.IsLinuxContainerEnvironment())
             {
                 _logger.LogInformation("Disabling container");
+                _logger.LogInformation("Setting env variable");
                 // Mark the container disabled. We look for this environment variable on host restart
                 _environment.SetEnvironmentVariable(EnvironmentSettingNames.ContainerDisabled, "1");
                 var unused = hostManager.RestartHostAsync();
@@ -98,6 +99,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             if (_environment.IsLinuxContainerEnvironment())
             {
                 _logger.LogInformation("Disabling container");
+                _logger.LogInformation("Setting file");
                 // Mark the container disabled. We look for this file on host restart
                 await FileUtility.MarkContainerDisabled(_logger);
                 var unused = hostManager.RestartHostAsync();
