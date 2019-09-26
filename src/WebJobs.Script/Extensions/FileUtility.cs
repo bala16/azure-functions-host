@@ -288,7 +288,7 @@ namespace Microsoft.Azure.WebJobs.Script
         {
             var tempPath = Path.GetTempPath();
             logger.LogInformation("ZZ MarkContainerDisabled TempPath " + tempPath);
-            string path = Path.Combine(tempPath, ScriptConstants.AppOfflineFileName);
+            string path = Path.Combine(tempPath, ScriptConstants.DisableContainerFileName);
             logger.LogInformation("ZZ MarkContainerDisabled path " + path);
             if (!File.Exists(path))
             {
@@ -305,7 +305,7 @@ namespace Microsoft.Azure.WebJobs.Script
         {
             var tempPath = Path.GetTempPath();
             logger.LogInformation("ZZ IsContainerDisabled TempPath " + tempPath);
-            string path = Path.Combine(tempPath, ScriptConstants.AppOfflineFileName);
+            string path = Path.Combine(tempPath, ScriptConstants.DisableContainerFileName);
             logger.LogInformation("ZZ IsContainerDisabled path " + path);
             var exists = File.Exists(path);
             logger.LogInformation("ZZ IsContainerDisabled exists " + exists);

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Script.WebHost.Extensions;
@@ -25,6 +26,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
         public async Task Invoke(HttpContext httpContext, IScriptHostManager scriptHostManager)
         {
+            var isContainerDisabled = FileUtility.IsContainerDisabled(_logger);
+            _logger.LogInformation("ZZ HostAvailabilityCheckMiddleware isContainerDisabled " + isContainerDisabled + " " + scriptHostManager.State);
             if (scriptHostManager.State != ScriptHostState.Offline)
             {
                 using (Logger.VerifyingHostAvailabilityScope(_logger, httpContext.TraceIdentifier))
