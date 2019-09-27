@@ -71,5 +71,23 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             return Ok(_instanceManager.GetInstanceInfo());
         }
+
+        [HttpPost]
+        [Route("admin/instance/disable")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public async Task<IActionResult> Disable([FromServices] IScriptHostManager hostManager)
+        {
+            if (_environment.IsLinuxContainerEnvironment())
+            {
+                _logger.LogInformation("Disabling container");
+                // Mark the container disabled. We check for this on host restart
+                await FileUtility.MarkContainerDisabled(_logger);
+                var unused = hostManager.RestartHostAsync();
+                return Ok();
+            }
+
+            _logger.LogWarning("Disable container used in non-linux environment");
+            return StatusCode(409);
+        }
     }
 }

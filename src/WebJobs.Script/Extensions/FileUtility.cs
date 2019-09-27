@@ -8,6 +8,7 @@ using System.IO.Abstractions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
@@ -281,6 +282,34 @@ namespace Microsoft.Azure.WebJobs.Script
             catch when (ignoreErrors)
             {
             }
+        }
+
+        public static async Task MarkContainerDisabled(ILogger logger)
+        {
+            var tempPath = Path.GetTempPath();
+            logger.LogInformation("ZZ MarkContainerDisabled TempPath " + tempPath);
+            string path = Path.Combine(tempPath, ScriptConstants.DisableContainerFileName);
+            logger.LogInformation("ZZ MarkContainerDisabled path " + path);
+            if (!File.Exists(path))
+            {
+                logger.LogInformation("ZZ MarkContainerDisabled Creating file");
+                await WriteAsync(path, string.Empty);
+            }
+            else
+            {
+                logger.LogInformation("ZZ MarkContainerDisabled file exists already");
+            }
+        }
+
+        public static bool IsContainerDisabled(ILogger logger)
+        {
+            var tempPath = Path.GetTempPath();
+            logger.LogInformation("ZZ IsContainerDisabled TempPath " + tempPath);
+            string path = Path.Combine(tempPath, ScriptConstants.DisableContainerFileName);
+            logger.LogInformation("ZZ IsContainerDisabled path " + path);
+            var exists = File.Exists(path);
+            logger.LogInformation("ZZ IsContainerDisabled exists " + exists);
+            return exists;
         }
     }
 }
