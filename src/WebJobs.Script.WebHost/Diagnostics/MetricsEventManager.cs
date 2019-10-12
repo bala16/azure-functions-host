@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.WebHost.Metering;
 using Microsoft.Azure.WebJobs.Script.WebHost.Metrics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 
@@ -24,12 +25,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
         private readonly int _functionActivityFlushIntervalSeconds;
         private readonly Timer _metricsFlushTimer;
         private readonly object _functionActivityTrackerLockObject = new object();
+        private readonly IMetricsPublisher _metricsPublisher;
+        private readonly IRawFunctionExecutionStatusSink _functionExecutionStatusSink;
         private static string appName;
         private static string subscriptionId;
         private bool _disposed;
-        private IMetricsPublisher _metricsPublisher;
 
-        public MetricsEventManager(IEnvironment environment, IEventGenerator generator, int functionActivityFlushIntervalSeconds, IMetricsPublisher metricsPublisher, int metricsFlushIntervalMS = DefaultFlushIntervalMS)
+        public MetricsEventManager(IEnvironment environment, IEventGenerator generator, int functionActivityFlushIntervalSeconds, IMetricsPublisher metricsPublisher, IRawFunctionExecutionStatusSink functionExecutionStatusSink, int metricsFlushIntervalMS = DefaultFlushIntervalMS)
         {
             // we read these in the ctor (not static ctor) since it can change on the fly
             appName = GetNormalizedString(environment.GetAzureWebsiteUniqueSlotName());
@@ -43,6 +45,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             _metricsFlushTimer = new Timer(TimerFlush, null, metricsFlushIntervalMS, metricsFlushIntervalMS);
 
             _metricsPublisher = metricsPublisher;
+            _functionExecutionStatusSink = functionExecutionStatusSink;
         }
 
         /// <summary>
@@ -151,7 +154,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             {
                 if (instance == null)
                 {
-                    instance = new FunctionActivityTracker(_eventGenerator, _metricsPublisher, _functionActivityFlushIntervalSeconds);
+                    instance = new FunctionActivityTracker(_eventGenerator, _metricsPublisher, _functionExecutionStatusSink, _functionActivityFlushIntervalSeconds);
                 }
                 instance.FunctionStarted(startedEvent);
             }
@@ -312,19 +315,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
         {
             private readonly string _executionId = Guid.NewGuid().ToString();
             private readonly object _functionMetricEventLockObject = new object();
+            private readonly IMetricsPublisher _metricsPublisher;
+            private readonly IRawFunctionExecutionStatusSink _rawFunctionExecutionStatusSink;
             private ulong _totalExecutionCount = 0;
             private int _functionActivityFlushInterval;
             private CancellationTokenSource _etwTaskCancellationSource = new CancellationTokenSource();
             private ConcurrentQueue<FunctionMetrics> _functionMetricsQueue = new ConcurrentQueue<FunctionMetrics>();
             private Dictionary<string, RunningFunctionInfo> _runningFunctions = new Dictionary<string, RunningFunctionInfo>();
             private bool _disposed = false;
-            private IMetricsPublisher _metricsPublisher;
 
-            internal FunctionActivityTracker(IEventGenerator generator, IMetricsPublisher metricsPublisher, int functionActivityFlushInterval)
+            internal FunctionActivityTracker(IEventGenerator generator, IMetricsPublisher metricsPublisher, IRawFunctionExecutionStatusSink rawFunctionExecutionStatusSink, int functionActivityFlushInterval)
             {
                 MetricsEventGenerator = generator;
                 _functionActivityFlushInterval = functionActivityFlushInterval;
                 _metricsPublisher = metricsPublisher;
+                _rawFunctionExecutionStatusSink = rawFunctionExecutionStatusSink;
                 Task.Run(
                     async () =>
                     {
@@ -485,6 +490,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
                         _executionId,
                         currentTime,
                         runningFunctionInfo.StartTime);
+                }
+
+                if (_rawFunctionExecutionStatusSink != null)
+                {
+                    var functionExecutionActivityWithTime = new TrackedFunctionExecutionActivity(currentTime,
+                        new FunctionExecutionActivity(
+                            runningFunctionInfo.Name, runningFunctionInfo.ExecutionStage));
+                    _rawFunctionExecutionStatusSink.TryAddFunctionActivityWithTime(functionExecutionActivityWithTime);
                 }
             }
 

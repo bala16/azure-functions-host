@@ -144,6 +144,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         }
 
         [HttpPost]
+        [Route("admin/host/scale/status")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevelOrInternal)]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [RequiresRunningHost]
+        public async Task<IActionResult> GetFunctionExecutionStatus()
+        {
+            await Task.Delay(0);
+            return Ok();
+        }
+
+        [HttpPost]
         [Route("admin/host/log")]
         [Authorize(Policy = PolicyNames.AdminAuthLevelOrInternal)]
         public IActionResult Log([FromBody]IEnumerable<HostLogEntry> logEntries)

@@ -12,8 +12,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
         private readonly MetricsEventManager _metricsEventManager;
         private bool disposed = false;
 
-        public WebHostMetricsLogger(IEnvironment environment, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher)
-            : this(environment, eventGenerator, metricsPublisher, 5)
+        public WebHostMetricsLogger(IEnvironment environment, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher, IRawFunctionExecutionStatusSink functionExecutionStatusSink)
+            : this(environment, eventGenerator, metricsPublisher, functionExecutionStatusSink, 5)
         {
         }
 
@@ -22,9 +22,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             _metricsEventManager = eventManager;
         }
 
-        protected WebHostMetricsLogger(IEnvironment environment, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher, int metricEventIntervalInSeconds)
+        protected WebHostMetricsLogger(IEnvironment environment, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher, IRawFunctionExecutionStatusSink functionExecutionStatusSink, int metricEventIntervalInSeconds)
         {
-            _metricsEventManager = new MetricsEventManager(environment, eventGenerator,  metricEventIntervalInSeconds, metricsPublisher);
+            _metricsEventManager = new MetricsEventManager(environment, eventGenerator,  metricEventIntervalInSeconds, metricsPublisher, functionExecutionStatusSink);
         }
 
         public object BeginEvent(string eventName, string functionName = null, string data = null)
