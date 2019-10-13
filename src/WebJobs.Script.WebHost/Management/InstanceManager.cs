@@ -271,8 +271,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             if (!string.IsNullOrEmpty(assignmentContext.AzureFilesConnectionString))
             {
-                _logger.LogInformation("QAZ HOME");
-                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home");
+                _logger.LogInformation("QAZ HOME1");
+                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home1");
             }
 
             _logger.LogInformation("QAZ mounting data");
