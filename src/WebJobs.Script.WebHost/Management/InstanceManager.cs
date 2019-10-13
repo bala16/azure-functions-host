@@ -272,6 +272,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             {
                 await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home");
             }
+
+            _logger.LogInformation("QAZ mounting data");
+            if (assignmentContext.Environment.ContainsKey("DATA1"))
+            {
+                _logger.LogInformation("QAZ data1");
+                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare,
+                    "/data1");
+            }
+
+            if (assignmentContext.Environment.ContainsKey("DATA2"))
+            {
+                _logger.LogInformation("QAZ data2");
+                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare,
+                    "/data2");
+            }
         }
 
         private async Task ApplyBlobPackageContext(RunFromPackageContext pkgContext, string targetPath)

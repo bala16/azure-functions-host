@@ -1,6 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -70,6 +74,48 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult GetInstanceInfo()
         {
             return Ok(_instanceManager.GetInstanceInfo());
+        }
+
+        private static string GetResults(string path)
+        {
+            string firstDir = string.Empty;
+            string firstFile = string.Empty;
+            int dirCount = -1;
+            int fileCount = -1;
+            var exists = Directory.Exists(path);
+            if (exists)
+            {
+                var directories = Directory.EnumerateDirectories(path);
+                dirCount = directories.Count();
+                if (directories.Any())
+                {
+                    firstDir = directories.FirstOrDefault();
+                }
+
+                var files = Directory.EnumerateFiles(path);
+                fileCount = files.Count();
+                if (files.Any())
+                {
+                    firstFile = files.FirstOrDefault();
+                }
+            }
+
+            var stringBuilder = new StringBuilder();
+            stringBuilder.AppendFormat("Path = {0} ", path);
+            stringBuilder.AppendFormat("Exists = {0} ", exists);
+            stringBuilder.AppendFormat("DirCount = {0} ", dirCount);
+            stringBuilder.AppendFormat("FileCount = {0} ", fileCount);
+            stringBuilder.AppendFormat("Dir = {0} ", firstDir);
+            stringBuilder.AppendFormat("File = {0} ", firstFile);
+
+            return stringBuilder.ToString();
+        }
+
+        [HttpGet]
+        [Route("admin/files")]
+        public string GetFiles()
+        {
+            return GetResults("/data1") + GetResults("/data2");
         }
     }
 }
