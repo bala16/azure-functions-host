@@ -487,6 +487,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private async Task Mount(IEnumerable<KeyValuePair<string, string>> formData)
         {
             var res = await _client.PostAsync(_environment.GetEnvironmentVariable(EnvironmentSettingNames.MeshInitURI), new FormUrlEncodedContent(formData));
+            _logger.LogInformation("QAZ mounted");
             _logger.LogInformation("Response {res} from init", res);
         }
 
