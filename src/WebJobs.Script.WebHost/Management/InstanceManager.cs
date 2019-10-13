@@ -268,8 +268,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             {
                 await ApplyBlobPackageContext(pkgContext, options.ScriptPath);
             }
-            else if (!string.IsNullOrEmpty(assignmentContext.AzureFilesConnectionString))
+
+            if (!string.IsNullOrEmpty(assignmentContext.AzureFilesConnectionString))
             {
+                _logger.LogInformation("QAZ HOME");
                 await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home");
             }
 
