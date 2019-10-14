@@ -115,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/files")]
         public string GetFiles()
         {
-            return GetResults("/data1") + GetResults("/data2") + GetResults("/home1");
+            return GetResults("/data1") + Environment.NewLine + GetResults("/data2") + Environment.NewLine + GetResults("/home1") + Environment.NewLine + GetResults("/home");
         }
 
         [HttpGet]
@@ -129,6 +129,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             else if (path.Equals("data1"))
             {
                 path = "data1";
+            }
+            else if (path.Equals("home"))
+            {
+                path = "home";
             }
             else
             {
