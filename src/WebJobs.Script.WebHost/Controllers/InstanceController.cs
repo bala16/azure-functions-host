@@ -117,5 +117,33 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             return GetResults("/data1") + GetResults("/data2") + GetResults("/home1");
         }
+
+        [HttpGet]
+        [Route("admin/addFile")]
+        public string AddFile([FromQuery] string path, string file)
+        {
+            if (path.Equals("home1"))
+            {
+                path = "/home1";
+            }
+            else if (path.Equals("data1"))
+            {
+                path = "data1";
+            }
+            else
+            {
+                return "--";
+            }
+
+            path = Path.Combine(path, file);
+
+            using (Stream fileStream = System.IO.File.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read))
+            using (var writer = new StreamWriter(fileStream, Encoding.UTF8, 4096))
+            {
+                writer.WriteAsync("abcd").Wait();
+            }
+
+            return path;
+        }
     }
 }
