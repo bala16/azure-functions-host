@@ -253,6 +253,27 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
         }
 
+        private async Task MountShare(HostAssignmentContext assignmentContext, string envVariable, string targetPath)
+        {
+            try
+            {
+                _logger.LogInformation("QAZ Check mounting " + targetPath);
+                if (assignmentContext.Environment.ContainsKey(envVariable))
+                {
+                    _logger.LogInformation("QAZ Mounting " + targetPath + " for " + envVariable);
+                    await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, targetPath);
+                }
+                else
+                {
+                    _logger.LogInformation("QAZ NOT Mounting " + targetPath + " for " + envVariable);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "QAZ Mounting failed for " + targetPath);
+            }
+        }
+
         private async Task ApplyContext(HostAssignmentContext assignmentContext)
         {
             _logger.LogInformation($"Applying {assignmentContext.Environment.Count} app setting(s)");
@@ -274,32 +295,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home");
             }
 
-            if (assignmentContext.Environment.ContainsKey("HOME_MOUNT"))
-            {
-                _logger.LogInformation("QAZ HOME_MOUNT");
-                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home");
-            }
-
-//            if (!string.IsNullOrEmpty(assignmentContext.AzureFilesConnectionString))
-//            {
-//                _logger.LogInformation("QAZ HOME1");
-//                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home1");
-//            }
-
-            _logger.LogInformation("QAZ mounting data");
-            if (assignmentContext.Environment.ContainsKey("DATA1"))
-            {
-                _logger.LogInformation("QAZ data1");
-                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare,
-                    "/data1");
-            }
-
-            if (assignmentContext.Environment.ContainsKey("DATA2"))
-            {
-                _logger.LogInformation("QAZ data2");
-                await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare,
-                    "/data2");
-            }
+            await MountShare(assignmentContext, "HOME_MOUNT", "/home");
+            await MountShare(assignmentContext, "HOME_MOUNT1", "/home1");
+            await MountShare(assignmentContext, "DATA1", "/data1");
+            await MountShare(assignmentContext, "DATA2", "/data2");
         }
 
         private async Task ApplyBlobPackageContext(RunFromPackageContext pkgContext, string targetPath)

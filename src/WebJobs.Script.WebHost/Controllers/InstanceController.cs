@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -115,24 +116,28 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/files")]
         public string GetFiles()
         {
-            return GetResults("/data1") + Environment.NewLine + GetResults("/data2") + Environment.NewLine + GetResults("/home1") + Environment.NewLine + GetResults("/home");
+            return GetResults("/data1") + Environment.NewLine + GetResults("/data2") + Environment.NewLine + GetResults("/home") + Environment.NewLine + GetResults("/home1");
         }
 
         [HttpGet]
         [Route("admin/addFile")]
         public string AddFile([FromQuery] string path, string file)
         {
-            if (path.Equals("home1"))
+            if (path.Equals("home"))
+            {
+                path = "/home";
+            }
+            else if (path.Equals("home1"))
             {
                 path = "/home1";
             }
             else if (path.Equals("data1"))
             {
-                path = "data1";
+                path = "/data1";
             }
-            else if (path.Equals("home"))
+            else if (path.Equals("data2"))
             {
-                path = "home";
+                path = "/data2";
             }
             else
             {
@@ -144,7 +149,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             using (Stream fileStream = System.IO.File.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read))
             using (var writer = new StreamWriter(fileStream, Encoding.UTF8, 4096))
             {
-                writer.WriteAsync("abcd").Wait();
+                writer.WriteAsync(DateTime.Now.ToString(CultureInfo.InvariantCulture)).Wait();
             }
 
             return path;
