@@ -262,6 +262,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 {
                     _logger.LogInformation("QAZ Mounting " + targetPath + " for " + envVariable);
                     await MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, targetPath);
+                    _logger.LogInformation("QAZ Mount successful for " + targetPath);
                 }
                 else
                 {
@@ -298,7 +299,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             await MountShare(assignmentContext, "HOME_MOUNT", "/home");
             await MountShare(assignmentContext, "HOME_MOUNT1", "/home1");
             await MountShare(assignmentContext, "DATA1", "/data1");
-            await MountShare(assignmentContext, "DATA2", "/data2");
+            await MountShare(assignmentContext, "DATA", "/data");
         }
 
         private async Task ApplyBlobPackageContext(RunFromPackageContext pkgContext, string targetPath)

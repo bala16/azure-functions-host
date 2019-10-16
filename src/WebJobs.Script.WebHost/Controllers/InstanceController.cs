@@ -116,7 +116,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/files")]
         public string GetFiles()
         {
-            return GetResults("/data1") + Environment.NewLine + GetResults("/data2") + Environment.NewLine + GetResults("/home") + Environment.NewLine + GetResults("/home1");
+            return GetResults("/data1") + Environment.NewLine + GetResults("/data") + Environment.NewLine + GetResults("/home") + Environment.NewLine + GetResults("/home1");
         }
 
         [HttpGet]
