@@ -297,9 +297,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
 
             await MountShare(assignmentContext, "HOME_MOUNT", "/home");
-            await MountShare(assignmentContext, "HOME_MOUNT1", "/home1");
             await MountShare(assignmentContext, "DATA1", "/data1");
-            await MountShare(assignmentContext, "DATA", "/data");
+            await MountShare(assignmentContext, "USERDATA", "/userdata");
         }
 
         private async Task ApplyBlobPackageContext(RunFromPackageContext pkgContext, string targetPath)
