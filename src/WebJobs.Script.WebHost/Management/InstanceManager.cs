@@ -497,6 +497,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 new KeyValuePair<string, string>("targetPath", scriptPath),
             });
 
+        public async Task LogInit()
+            => await Mount(new[]
+            {
+                new KeyValuePair<string, string>("operation", "testtype"),
+                new KeyValuePair<string, string>("filePath", "filePath"),
+                new KeyValuePair<string, string>("targetPath", "scriptPath"),
+            });
+
         private async Task MountCifs(string connectionString, string contentShare, string targetPath)
         {
             var sa = CloudStorageAccount.Parse(connectionString);

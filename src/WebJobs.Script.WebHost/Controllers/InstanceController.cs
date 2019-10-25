@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -82,6 +83,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             await Utility.MarkContainerDisabled(_logger);
             var tIgnore = Task.Run(() => hostManager.RestartHostAsync());
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/loginit")]
+        public async Task<string> LogInit()
+        {
+            _logger.LogInformation("LogInit");
+            await _instanceManager.LogInit();
+            return _environment.GetEnvironmentVariable("WEBSITE_SITE_NAME") + "-" +
+                   Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
         }
     }
 }
