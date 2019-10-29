@@ -64,11 +64,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
                     _logger.LogDebug($"Specializing sidecar at {address}");
 
+                    var s = JsonConvert.SerializeObject(context.MSIContext);
                     var requestMessage = new HttpRequestMessage(HttpMethod.Post, address)
                     {
-                        Content = new StringContent(JsonConvert.SerializeObject(context.MSIContext),
+                        Content = new StringContent(s,
                             Encoding.UTF8, "application/json")
                     };
+
+                    _logger.LogInformation("TTT" + s);
 
                     var response = await _client.SendAsync(requestMessage);
 
