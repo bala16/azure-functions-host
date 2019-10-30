@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             string endpoint;
             var msiEnabled = context.IsMSIEnabled(out endpoint);
 
-            _logger.LogInformation($"MSI enabled status2: {msiEnabled}");
+            _logger.LogInformation($"MSI enabled status3: {msiEnabled}");
 
             if (msiEnabled)
             {
@@ -71,7 +71,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                             Encoding.UTF8, "application/json")
                     };
 
-                    _logger.LogInformation("TTTT" + serializeObject);
+                    _logger.LogDebug($"MSI Context1 = {serializeObject}");
+                    _logger.LogDebug($"MSI Context2 = {serializeObject.Length}");
+
+                    var managedServiceIdentities = context.MSIContext.Identities;
+                    foreach (var managedServiceIdentity in managedServiceIdentities)
+                    {
+                        _logger.LogDebug($"MSI Context3 = {managedServiceIdentity.ClientId}");
+                    }
 
                     var response = await _client.SendAsync(requestMessage);
 
