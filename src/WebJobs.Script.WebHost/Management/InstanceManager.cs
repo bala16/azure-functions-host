@@ -53,7 +53,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             string endpoint;
             var msiEnabled = context.IsMSIEnabled(out endpoint);
 
-            _logger.LogInformation($"MSI enabled status: {msiEnabled}");
+            _logger.LogInformation($"MSI enabled status2: {msiEnabled}");
 
             if (msiEnabled)
             {
