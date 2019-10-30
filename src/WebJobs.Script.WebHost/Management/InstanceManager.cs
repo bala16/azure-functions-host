@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                     var managedServiceIdentities = context.MSIContext.Identities;
                     foreach (var managedServiceIdentity in managedServiceIdentities)
                     {
-                        _logger.LogDebug($"MSI Context3 = {managedServiceIdentity.ClientId}");
+                        _logger.LogDebug($"MSI Context300 = {managedServiceIdentity.ClientId} {managedServiceIdentity.PrincipalId}");
                     }
 
                     var response = await _client.SendAsync(requestMessage);
