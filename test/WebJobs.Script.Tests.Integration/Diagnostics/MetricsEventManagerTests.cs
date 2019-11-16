@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             var mockMetricsPublisher = new Mock<IMetricsPublisher>();
             var testAppServiceOptions = new Mock<IOptionsMonitor<AppServiceOptions>>();
             testAppServiceOptions.Setup(a => a.CurrentValue).Returns(new AppServiceOptions { AppName = "RandomAppName", SubscriptionId = Guid.NewGuid().ToString() });
-            _metricsEventManager = new MetricsEventManager(testAppServiceOptions.Object, mockEventGenerator.Object, MinimumLongRunningDurationInMs / 1000, mockMetricsPublisher.Object);
+            _metricsEventManager = new MetricsEventManager(testAppServiceOptions.Object, mockEventGenerator.Object, MinimumLongRunningDurationInMs / 1000, mockMetricsPublisher.Object, null);
             _metricsLogger = new WebHostMetricsLogger(_metricsEventManager);
         }
 

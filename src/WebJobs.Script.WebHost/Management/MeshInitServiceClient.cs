@@ -4,9 +4,12 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 {
@@ -28,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         {
             var sa = CloudStorageAccount.Parse(connectionString);
             var key = Convert.ToBase64String(sa.Credentials.ExportKey());
-            await Mount(new[]
+            await SendAsync(new[]
             {
                 new KeyValuePair<string, string>("operation", "cifs"),
                 new KeyValuePair<string, string>("host", sa.FileEndpoint.Host),
@@ -46,17 +49,43 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         }
 
         public async Task MountFuse(string type, string filePath, string scriptPath)
-            => await Mount(new[]
+            => await SendAsync(new[]
             {
                 new KeyValuePair<string, string>("operation", type),
                 new KeyValuePair<string, string>("filePath", filePath),
                 new KeyValuePair<string, string>("targetPath", scriptPath),
             });
 
-        private async Task Mount(IEnumerable<KeyValuePair<string, string>> formData)
+        public async Task<bool> PublishContainerFunctionExecutionActivity(ContainerFunctionExecutionActivity activity)
+        {
+            try
+            {
+                var meshInitServiceUri = _environment.GetEnvironmentVariable(EnvironmentSettingNames.MeshInitURI);
+
+                var operation = new[]
+                {
+                    new KeyValuePair<string, string>("operation", "add-fes"),
+                    new KeyValuePair<string, string>("content", JsonConvert.SerializeObject(activity)),
+                };
+                _logger.LogInformation($"Publishing {operation} to {meshInitServiceUri}"); // remove
+
+                var response = await SendAsync(operation);
+                response.EnsureSuccessStatusCode();
+                _logger.LogInformation($"Successfully published function execution activity. Status = {response.StatusCode}");
+                return true; // remove later
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"{nameof(PublishContainerFunctionExecutionActivity)}");
+                return false;
+            }
+        }
+
+        private async Task<HttpResponseMessage> SendAsync(IEnumerable<KeyValuePair<string, string>> formData)
         {
             var res = await _client.PostAsync(_environment.GetEnvironmentVariable(EnvironmentSettingNames.MeshInitURI), new FormUrlEncodedContent(formData));
             _logger.LogInformation("Response {res} from init", res);
+            return res;
         }
     }
 }
