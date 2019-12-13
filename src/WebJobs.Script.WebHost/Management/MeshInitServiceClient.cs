@@ -18,13 +18,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private readonly HttpClient _client;
         private readonly ILogger _logger;
         private readonly IEnvironment _environment;
+        private readonly IScriptWebHostEnvironment _webHostEnvironment;
 
         public MeshInitServiceClient(HttpClient client, IEnvironment environment,
+            IScriptWebHostEnvironment webHostEnvironment,
             ILogger<MeshInitServiceClient> logger)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
+            _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
         }
 
         public async Task MountCifs(string connectionString, string contentShare, string targetPath)
@@ -60,6 +63,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         {
             try
             {
+                if (_webHostEnvironment.InStandbyMode)
+                {
+                    _logger.LogDebug(
+                        $"Discarding function execution activity for {activity.FunctionName} in standby mode");
+                    return false;
+                }
+
                 var meshInitServiceUri = _environment.GetEnvironmentVariable(EnvironmentSettingNames.MeshInitURI);
 
                 var operation = new[]
