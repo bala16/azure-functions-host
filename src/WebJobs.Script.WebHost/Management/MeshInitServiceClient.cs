@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                     new KeyValuePair<string, string>("operation", "add-fes"),
                     new KeyValuePair<string, string>("content", JsonConvert.SerializeObject(activity)),
                 };
-                _logger.LogInformation($"Publishing {operation} to {meshInitServiceUri}"); // remove
+                _logger.LogInformation($"Publishing {JsonConvert.SerializeObject(activity)} to {meshInitServiceUri}"); // remove
 
                 var response = await SendAsync(operation);
                 response.EnsureSuccessStatusCode();
