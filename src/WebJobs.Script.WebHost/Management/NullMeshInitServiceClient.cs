@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         }
 
         public Task PublishContainerFunctionExecutionActivity(ContainerFunctionExecutionActivity activity)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task PublishContainerFunctionExecutionActivities(IEnumerable<ContainerFunctionExecutionActivity> activities)
         {
             return Task.CompletedTask;
         }

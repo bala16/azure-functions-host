@@ -194,13 +194,45 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 if (environment.IsLinuxConsumption())
                 {
                     var httpClient = s.GetService<HttpClient>();
-                    var scriptWebHostEnvironment = s.GetService<IScriptWebHostEnvironment>();
                     var logger = s.GetService<ILogger<MeshInitServiceClient>>();
-                    return new MeshInitServiceClient(httpClient, environment, scriptWebHostEnvironment, logger);
+                    return new MeshInitServiceClient(httpClient, environment, logger);
                 }
 
                 var nullLogger = s.GetService<ILogger<NullMeshInitServiceClient>>();
                 return new NullMeshInitServiceClient(nullLogger);
+            });
+
+            services.AddSingleton<LinuxFunctionExecutionActivityPublisher>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                var logger = s.GetService<ILogger<LinuxFunctionExecutionActivityPublisher>>();
+                var meshInitServiceClient = s.GetService<IMeshInitServiceClient>();
+                var scriptWebHostEnvironment = s.GetService<IScriptWebHostEnvironment>();
+                return new LinuxFunctionExecutionActivityPublisher(meshInitServiceClient, scriptWebHostEnvironment,
+                    environment, logger);
+            });
+
+            services.AddSingleton<IHostedService>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                if (environment.IsLinuxConsumption())
+                {
+                    return s.GetRequiredService<LinuxFunctionExecutionActivityPublisher>();
+                }
+
+                return NullHostedService.Instance;
+            });
+
+            services.AddSingleton<ILinuxFunctionExecutionActivityPublisher>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                if (environment.IsLinuxConsumption())
+                {
+                    return s.GetRequiredService<LinuxFunctionExecutionActivityPublisher>();
+                }
+
+                var nullLogger = s.GetService<ILogger<NullLinuxFunctionExecutionActivityPublisher>>();
+                return new NullLinuxFunctionExecutionActivityPublisher(nullLogger);
             });
         }
 

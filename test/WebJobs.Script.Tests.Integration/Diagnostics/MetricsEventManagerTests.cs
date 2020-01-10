@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Configuration;
 using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
 using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
-using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Metrics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Options;
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         private readonly WebHostMetricsLogger _metricsLogger;
         private readonly List<FunctionExecutionEventArguments> _functionExecutionEventArguments;
         private readonly List<SystemMetricEvent> _events;
-        private readonly Mock<IMeshInitServiceClient> _meshInitServiceClient;
+        private readonly Mock<ILinuxFunctionExecutionActivityPublisher> _linuxFunctionExecutionActivityPublisher;
 
         public MetricsEventManagerTests()
         {
@@ -85,8 +85,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             var mockMetricsPublisher = new Mock<IMetricsPublisher>();
             var testAppServiceOptions = new Mock<IOptionsMonitor<AppServiceOptions>>();
             testAppServiceOptions.Setup(a => a.CurrentValue).Returns(new AppServiceOptions { AppName = "RandomAppName", SubscriptionId = Guid.NewGuid().ToString() });
-            _meshInitServiceClient = new Mock<IMeshInitServiceClient>();
-            _metricsEventManager = new MetricsEventManager(testAppServiceOptions.Object, mockEventGenerator.Object, MinimumLongRunningDurationInMs / 1000, mockMetricsPublisher.Object, _meshInitServiceClient.Object);
+            _linuxFunctionExecutionActivityPublisher = new Mock<ILinuxFunctionExecutionActivityPublisher>();
+            _metricsEventManager = new MetricsEventManager(testAppServiceOptions.Object, mockEventGenerator.Object, MinimumLongRunningDurationInMs / 1000, mockMetricsPublisher.Object, _linuxFunctionExecutionActivityPublisher.Object);
             _metricsLogger = new WebHostMetricsLogger(_metricsEventManager);
         }
 
@@ -442,19 +442,18 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         [Fact]
         public async Task ShortRunningFunction_Publishes_Function_EndEvent_To_MeshInitService()
         {
-
-            _meshInitServiceClient
+            _linuxFunctionExecutionActivityPublisher
                 .Setup(client =>
-                    client.PublishContainerFunctionExecutionActivity(
+                    client.PublishFunctionExecutionActivity(
                         It.Is<ContainerFunctionExecutionActivity>(a =>
                             a.ExecutionStage == ExecutionStage.Finished && a.Success)));
 
             var taskList = new List<Task> {ShortTestFunction(_metricsLogger)};
             await AwaitFunctionTasks(taskList);
 
-            _meshInitServiceClient
+            _linuxFunctionExecutionActivityPublisher
                 .Verify(client =>
-                    client.PublishContainerFunctionExecutionActivity(
+                    client.PublishFunctionExecutionActivity(
                         It.Is<ContainerFunctionExecutionActivity>(a =>
                             a.ExecutionStage == ExecutionStage.Finished && a.Success)), Times.Once);
         }
@@ -462,22 +461,22 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         [Fact]
         public async Task LongRunningFunction_Publishes_Function_InProgress_And_EndEvent_To_MeshInitService()
         {
-            _meshInitServiceClient
+            _linuxFunctionExecutionActivityPublisher
                 .Setup(client =>
-                    client.PublishContainerFunctionExecutionActivity(It.IsAny<ContainerFunctionExecutionActivity>()));
-
+                    client.PublishFunctionExecutionActivity(It.IsAny<ContainerFunctionExecutionActivity>()));
+            
             var taskList = new List<Task> { LongTestFunction(_metricsLogger) };
             await AwaitFunctionTasks(taskList);
 
-            _meshInitServiceClient
+            _linuxFunctionExecutionActivityPublisher
                 .Verify(client =>
-                    client.PublishContainerFunctionExecutionActivity(
+                    client.PublishFunctionExecutionActivity(
                         It.Is<ContainerFunctionExecutionActivity>(a =>
                             a.ExecutionStage == ExecutionStage.InProgress)), Times.AtLeastOnce);
 
-            _meshInitServiceClient
+            _linuxFunctionExecutionActivityPublisher
                 .Verify(client =>
-                    client.PublishContainerFunctionExecutionActivity(
+                    client.PublishFunctionExecutionActivity(
                         It.Is<ContainerFunctionExecutionActivity>(a =>
                             a.ExecutionStage == ExecutionStage.Finished && a.Success)), Times.Once);
         }

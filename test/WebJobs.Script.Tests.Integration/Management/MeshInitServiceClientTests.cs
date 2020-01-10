@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -32,8 +34,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Management
             _environment.SetEnvironmentVariable(EnvironmentSettingNames.MeshInitURI, MeshInitUri);
             _scriptWebEnvironment = new ScriptWebHostEnvironment(_environment);
 
-            _meshInitServiceClient = new MeshInitServiceClient(new HttpClient(_handlerMock.Object), _environment,
-                _scriptWebEnvironment, NullLogger<MeshInitServiceClient>.Instance);
+            _meshInitServiceClient = new MeshInitServiceClient(new HttpClient(_handlerMock.Object), _environment, NullLogger<MeshInitServiceClient>.Instance);
         }
 
         private static bool IsMountCifsRequest(HttpRequestMessage request, string targetPath)
@@ -53,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Management
                    string.Equals(targetPath, formData["targetPath"]);
         }
 
-        private static bool IsPublishExecutionStatusRequest(HttpRequestMessage request, string functionName, ExecutionStage executionStage)
+        private static bool IsPublishExecutionStatusRequest(HttpRequestMessage request, params ContainerFunctionExecutionActivity[] activities)
         {
             var formData = request.Content.ReadAsFormDataAsync().Result;
             if (string.Equals(MeshInitUri, request.RequestUri.AbsoluteUri) &&
@@ -61,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Management
             {
                 var activityContent = formData["content"];
                 var activity = JsonConvert.DeserializeObject<ContainerFunctionExecutionActivity>(activityContent);
-                return string.Equals(activity.FunctionName, functionName) && activity.ExecutionStage == executionStage;
+                return activities.Contains(activity);
             }
 
             return false;
@@ -120,43 +121,65 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Management
                 StatusCode = HttpStatusCode.OK
             });
 
-            var activity = new ContainerFunctionExecutionActivity()
-            {
-                EventTime = DateTime.UtcNow,
-                ExecutionStage = ExecutionStage.InProgress,
-                FunctionName = "func1"
-            };
+            var activity = new ContainerFunctionExecutionActivity(DateTime.UtcNow, "func1", ExecutionStage.InProgress,
+                "QueueTrigger", false);
 
-            await _meshInitServiceClient.PublishContainerFunctionExecutionActivity(activity);
+            var activities = new List<ContainerFunctionExecutionActivity> {activity};
+
+            await _meshInitServiceClient.PublishContainerFunctionExecutionActivities(activities);
 
             _handlerMock.Protected().Verify<Task<HttpResponseMessage>>("SendAsync", Times.Once(),
-                ItExpr.Is<HttpRequestMessage>(r => IsPublishExecutionStatusRequest(r, "func1", ExecutionStage.InProgress)),
+                ItExpr.Is<HttpRequestMessage>(r => IsPublishExecutionStatusRequest(r, activity)),
                 ItExpr.IsAny<CancellationToken>());
         }
 
+        [Fact]
+        public async Task PublishesAllFunctionExecutionActivities()
+        {
+            _handlerMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()).ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK
+            });
+
+            var activity1 = new ContainerFunctionExecutionActivity(DateTime.UtcNow, "func1", ExecutionStage.InProgress,
+                "QueueTrigger", false);
+
+            var activity2 = new ContainerFunctionExecutionActivity(DateTime.UtcNow, "func2", ExecutionStage.Finished,
+                "QueueTrigger", true);
+
+            var activities = new List<ContainerFunctionExecutionActivity> {activity1, activity2};
+
+            await _meshInitServiceClient.PublishContainerFunctionExecutionActivities(activities);
+
+            _handlerMock.Protected().Verify<Task<HttpResponseMessage>>("SendAsync", Times.Exactly(2),
+                ItExpr.Is<HttpRequestMessage>(r => IsPublishExecutionStatusRequest(r, activity1, activity2)),
+                ItExpr.IsAny<CancellationToken>());
+
+        }
 
         [Fact]
-        public async Task DoesNotPublishesFunctionExecutionStatusInStandbyMode()
+        public async Task PublishesAllFunctionExecutionActivitiesException()
         {
-            // Enable placeholder mode
-            _environment.SetEnvironmentVariable(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "1");
-            var scriptWebEnvironment = new ScriptWebHostEnvironment(_environment);
-
-            var meshInitServiceClient = new MeshInitServiceClient(new HttpClient(_handlerMock.Object), _environment,
-                scriptWebEnvironment, NullLogger<MeshInitServiceClient>.Instance);
-
-            var activity = new ContainerFunctionExecutionActivity()
-            {
-                EventTime = DateTime.UtcNow,
-                ExecutionStage = ExecutionStage.InProgress,
-                FunctionName = "func1"
-            };
-
-            await meshInitServiceClient.PublishContainerFunctionExecutionActivity(activity);
-
-            _handlerMock.Protected().Verify<Task<HttpResponseMessage>>("SendAsync", Times.Never(),
+            _handlerMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()).Throws(new Exception());
+
+            var activity1 = new ContainerFunctionExecutionActivity(DateTime.UtcNow, "func1", ExecutionStage.InProgress,
+                "QueueTrigger", false);
+
+            var activity2 = new ContainerFunctionExecutionActivity(DateTime.UtcNow, "func2", ExecutionStage.Finished,
+                "QueueTrigger", true);
+
+            var activities = new List<ContainerFunctionExecutionActivity> { activity1, activity2 };
+
+            await _meshInitServiceClient.PublishContainerFunctionExecutionActivities(activities);
+
+            _handlerMock.Protected().Verify<Task<HttpResponseMessage>>("SendAsync", Times.Exactly(2),
+                ItExpr.Is<HttpRequestMessage>(r => IsPublishExecutionStatusRequest(r, activity1, activity2)),
                 ItExpr.IsAny<CancellationToken>());
+
         }
     }
 }
