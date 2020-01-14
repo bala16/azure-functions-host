@@ -105,7 +105,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             services.AddSingleton<IFunctionMetadataProvider, FunctionMetadataProvider>();
             services.AddSingleton<IWebFunctionsManager, WebFunctionsManager>();
             services.AddSingleton<IInstanceManager, InstanceManager>();
-            services.AddSingleton<IMeshInitServiceClient, MeshInitServiceClient>();
             services.AddSingleton(_ => new HttpClient());
             services.AddSingleton<HostNameProvider>();
             services.AddSingleton<IFileSystem>(_ => FileUtility.Instance);
@@ -187,6 +186,52 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
                 var nullMetricsLogger = s.GetService<ILogger<NullMetricsPublisher>>();
                 return new NullMetricsPublisher(nullMetricsLogger);
+            });
+
+            services.AddSingleton<IMeshInitServiceClient>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                if (environment.IsLinuxConsumption())
+                {
+                    var httpClient = s.GetService<HttpClient>();
+                    var logger = s.GetService<ILogger<MeshInitServiceClient>>();
+                    return new MeshInitServiceClient(httpClient, environment, logger);
+                }
+
+                var nullLogger = s.GetService<ILogger<NullMeshInitServiceClient>>();
+                return new NullMeshInitServiceClient(nullLogger);
+            });
+
+            services.AddSingleton<LinuxFunctionExecutionActivityPublisher>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                var logger = s.GetService<ILogger<LinuxFunctionExecutionActivityPublisher>>();
+                var meshInitServiceClient = s.GetService<IMeshInitServiceClient>();
+                var standbyOptions = s.GetService<IOptionsMonitor<StandbyOptions>>();
+                return new LinuxFunctionExecutionActivityPublisher(standbyOptions, meshInitServiceClient, environment, logger);
+            });
+
+            services.AddSingleton<IHostedService>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                if (environment.IsLinuxConsumption())
+                {
+                    return s.GetRequiredService<LinuxFunctionExecutionActivityPublisher>();
+                }
+
+                return NullHostedService.Instance;
+            });
+
+            services.AddSingleton<ILinuxFunctionExecutionActivityPublisher>(s =>
+            {
+                var environment = s.GetService<IEnvironment>();
+                if (environment.IsLinuxConsumption())
+                {
+                    return s.GetRequiredService<LinuxFunctionExecutionActivityPublisher>();
+                }
+
+                var nullLogger = s.GetService<ILogger<NullLinuxFunctionExecutionActivityPublisher>>();
+                return new NullLinuxFunctionExecutionActivityPublisher(nullLogger);
             });
         }
 

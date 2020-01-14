@@ -4,6 +4,7 @@
 using System;
 using Microsoft.Azure.WebJobs.Script.Configuration;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
 using Microsoft.Azure.WebJobs.Script.WebHost.Metrics;
 using Microsoft.Extensions.Options;
 
@@ -14,8 +15,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
         private readonly MetricsEventManager _metricsEventManager;
         private bool disposed = false;
 
-        public WebHostMetricsLogger(IOptionsMonitor<AppServiceOptions> appServiceOptions, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher)
-            : this(appServiceOptions, eventGenerator, metricsPublisher, 5)
+        public WebHostMetricsLogger(IOptionsMonitor<AppServiceOptions> appServiceOptions, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher, ILinuxFunctionExecutionActivityPublisher linuxFunctionExecutionActivityPublisher)
+            : this(appServiceOptions, eventGenerator, metricsPublisher, linuxFunctionExecutionActivityPublisher, 5)
         {
         }
 
@@ -24,9 +25,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             _metricsEventManager = eventManager;
         }
 
-        protected WebHostMetricsLogger(IOptionsMonitor<AppServiceOptions> appServiceOptions, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher, int metricEventIntervalInSeconds)
+        protected WebHostMetricsLogger(IOptionsMonitor<AppServiceOptions> appServiceOptions, IEventGenerator eventGenerator, IMetricsPublisher metricsPublisher, ILinuxFunctionExecutionActivityPublisher linuxFunctionExecutionActivityPublisher, int metricEventIntervalInSeconds)
         {
-            _metricsEventManager = new MetricsEventManager(appServiceOptions, eventGenerator, metricEventIntervalInSeconds, metricsPublisher);
+            _metricsEventManager = new MetricsEventManager(appServiceOptions, eventGenerator, metricEventIntervalInSeconds, metricsPublisher, linuxFunctionExecutionActivityPublisher);
         }
 
         public object BeginEvent(string eventName, string functionName = null, string data = null)
