@@ -50,9 +50,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 return StatusCode(StatusCodes.Status400BadRequest, error);
             }
 
+            _logger.LogError($"encryptedAssignmentContext.IsWarmup={encryptedAssignmentContext.IsWarmup}");
+
             if (!encryptedAssignmentContext.IsWarmup)
             {
-                _logger.LogInformation(">><<" + JsonConvert.SerializeObject(assignmentContext, Formatting.Indented));
+                _logger.LogInformation(JsonConvert.SerializeObject(assignmentContext, Formatting.Indented));
             }
 
             // Wait for Sidecar specialization to complete before returning ok.
