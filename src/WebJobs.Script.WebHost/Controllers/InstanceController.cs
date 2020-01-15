@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -47,6 +48,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             if (error != null)
             {
                 return StatusCode(StatusCodes.Status400BadRequest, error);
+            }
+
+            if (!encryptedAssignmentContext.IsWarmup)
+            {
+                _logger.LogInformation(">><<" + JsonConvert.SerializeObject(assignmentContext, Formatting.Indented));
             }
 
             // Wait for Sidecar specialization to complete before returning ok.
