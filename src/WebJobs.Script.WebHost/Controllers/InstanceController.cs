@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> Assign([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
         {
-            _logger.LogDebug($"Starting container assignment for host : {Request?.Host}. ContextLength is: {encryptedAssignmentContext.EncryptedContext?.Length}");
+            _logger.LogDebug($"Starting2 container assignment for host : {Request?.Host}. ContextLength is: {encryptedAssignmentContext.EncryptedContext?.Length}");
             var containerKey = _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerEncryptionKey);
             var assignmentContext = encryptedAssignmentContext.IsWarmup
                 ? null
@@ -55,6 +55,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             if (!encryptedAssignmentContext.IsWarmup)
             {
                 _logger.LogInformation(JsonConvert.SerializeObject(assignmentContext, Formatting.Indented));
+                _logger.LogInformation($"{assignmentContext.EasyAuthSettings.SiteAuthAutoProvisioned}");
+                _logger.LogInformation($"{assignmentContext.EasyAuthSettings.SiteAuthClientId}");
+                _logger.LogInformation($"{assignmentContext.EasyAuthSettings.SiteAuthEnabled}");
             }
 
             // Wait for Sidecar specialization to complete before returning ok.
