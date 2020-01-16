@@ -56,8 +56,26 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             {
                 _logger.LogInformation(JsonConvert.SerializeObject(assignmentContext, Formatting.Indented));
                 _logger.LogInformation($"{assignmentContext.EasyAuthSettings.SiteAuthAutoProvisioned}");
+
+                if (assignmentContext.EasyAuthSettings.SiteAuthAutoProvisioned.HasValue)
+                {
+                    _logger.LogInformation($" assignmentContext.EasyAuthSettings.SiteAuthAutoProvisioned = {assignmentContext.EasyAuthSettings.SiteAuthAutoProvisioned}");
+                }
+                else
+                {
+                    _logger.LogInformation($" assignmentContext.EasyAuthSettings.SiteAuthAutoProvisioned = NULL");
+                }
+
                 _logger.LogInformation($"{assignmentContext.EasyAuthSettings.SiteAuthClientId}");
                 _logger.LogInformation($"{assignmentContext.EasyAuthSettings.SiteAuthEnabled}");
+                if (assignmentContext.EasyAuthSettings.SiteAuthEnabled)
+                {
+                    _logger.LogInformation($"assignmentContext.EasyAuthSettings.SiteAuthEnabled = TRUE");
+                }
+                else
+                {
+                    _logger.LogInformation($"assignmentContext.EasyAuthSettings.SiteAuthEnabled = FALSE");
+                }
             }
 
             // Wait for Sidecar specialization to complete before returning ok.
