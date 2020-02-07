@@ -42,6 +42,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             bool succeeded = false;
             if (!encryptedAssignmentContext.IsWarmup)
             {
+                _logger.LogDebug("_startupContextProvider.SetContext(encryptedAssignmentContext)");
                 var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext);
 
                 // before starting the assignment we want to perform as much
