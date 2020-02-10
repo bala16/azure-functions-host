@@ -183,7 +183,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             string encrypted = SimpleWebTokenHelper.Encrypt(json, environment: _environment);
             var encryptedContext = new EncryptedHostAssignmentContext { EncryptedContext = encrypted };
 
-            var result = _startupContextProvider.SetContext(encryptedContext);
+            var result = _startupContextProvider.SetContext(encryptedContext, null);
             Assert.Equal(context.SiteName, result.SiteName);
             Assert.Equal(_secrets.Host.Master, result.Secrets.Host.Master);
 

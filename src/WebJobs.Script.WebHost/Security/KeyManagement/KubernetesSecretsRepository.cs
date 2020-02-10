@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public bool IsEncryptionSupported => false;
 
-        public async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName)
+        public async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName, ILogger logger)
         {
             return type == ScriptSecretsType.Host ? await ReadHostSecrets() : await ReadFunctionSecrets(functionName);
         }

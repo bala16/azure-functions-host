@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
         }
 
-        public abstract Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName);
+        public abstract Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName, ILogger logger);
 
         public abstract Task WriteAsync(ScriptSecretsType type, string functionName, ScriptSecrets secrets);
 

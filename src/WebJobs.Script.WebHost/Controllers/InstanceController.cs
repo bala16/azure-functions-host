@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             if (!encryptedAssignmentContext.IsWarmup)
             {
                 _logger.LogDebug("_startupContextProvider.SetContext(encryptedAssignmentContext)");
-                var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext);
+                var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext, _logger);
 
                 // before starting the assignment we want to perform as much
                 // up front validation on the context as possible

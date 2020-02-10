@@ -135,6 +135,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                         _hostSecretsLock.Release();
                     }
                 }
+                else
+                {
+                    _logger.LogInformation("ZZ Hostsecrets available in host. No loading");
+                }
 
                 return _hostSecrets;
             }
@@ -387,7 +391,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         private async Task<ScriptSecrets> LoadSecretsAsync(ScriptSecretsType type, string keyScope)
         {
-            return await _repository.ReadAsync(type, keyScope).ConfigureAwait(false);
+            return await _repository.ReadAsync(type, keyScope, _logger).ConfigureAwait(false);
         }
 
         public async Task<(string, AuthorizationLevel)> GetAuthorizationLevelOrNullAsync(string keyValue, string functionName = null)
@@ -646,7 +650,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 List<ScriptSecrets> shapShots = new List<ScriptSecrets>();
                 foreach (string secretPath in secretBackups)
                 {
-                    ScriptSecrets secrets = await _repository.ReadAsync(ScriptSecretsType.Function, Path.GetFileNameWithoutExtension(secretPath));
+                    ScriptSecrets secrets = await _repository.ReadAsync(ScriptSecretsType.Function, Path.GetFileNameWithoutExtension(secretPath), null);
                     shapShots.Add(secrets);
                 }
                 string[] hosts = shapShots.Select(x => x.HostName).Distinct().ToArray();
@@ -724,6 +728,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 _functionSecrets = new ConcurrentDictionary<string, IDictionary<string, string>>(cachedFunctionSecrets, StringComparer.OrdinalIgnoreCase);
             }
             _hostSecrets = startupContextProvider.GetHostSecretsOrNull();
+
+            if (_hostSecrets != null)
+            {
+                _logger.LogInformation("ZZ _hostSecrets available in cache");
+            }
+            else
+            {
+                _logger.LogInformation("ZZ _hostSecrets NOT available in cache");
+            }
         }
     }
 }

@@ -136,7 +136,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 var target = _fixture.GetNewSecretRepository();
 
-                ScriptSecrets secretsContent = await target.ReadAsync(secretsType, testFunctionName);
+                ScriptSecrets secretsContent = await target.ReadAsync(secretsType, testFunctionName, null);
 
                 if (secretsType == ScriptSecretsType.Host)
                 {
@@ -269,9 +269,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 await _fixture.WriteSecret(testFunctionName, initialSecretText);
                 var target = _fixture.GetNewSecretRepository();
-                ScriptSecrets preTextResult = await target.ReadAsync(secretsType, testFunctionName);
+                ScriptSecrets preTextResult = await target.ReadAsync(secretsType, testFunctionName, null);
                 await _fixture.WriteSecret(testFunctionName, updatedSecretText);
-                ScriptSecrets postTextResult = await target.ReadAsync(secretsType, testFunctionName);
+                ScriptSecrets postTextResult = await target.ReadAsync(secretsType, testFunctionName, null);
 
                 Assert.Equal("test1", (preTextResult as FunctionSecrets).Keys[0].Value);
                 Assert.Equal("test2", (postTextResult as FunctionSecrets).Keys[0].Value);

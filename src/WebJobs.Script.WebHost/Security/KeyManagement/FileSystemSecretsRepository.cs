@@ -41,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
         }
 
-        public override async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName)
+        public override async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName, ILogger logger)
         {
             string filePath = GetSecretsFilePath(type, functionName);
             string secretsContent = null;

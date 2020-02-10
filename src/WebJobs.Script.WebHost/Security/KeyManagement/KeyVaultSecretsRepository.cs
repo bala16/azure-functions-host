@@ -57,7 +57,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
         }
 
-        public override async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName)
+        public override async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName, ILogger logger)
         {
             return type == ScriptSecretsType.Host ? await ReadHostSecrets() : await ReadFunctionSecrets(functionName);
         }

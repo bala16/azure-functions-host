@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         bool IsEncryptionSupported { get; }
 
-        Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName);
+        Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName, ILogger logger);
 
         Task WriteAsync(ScriptSecretsType type, string functionName, ScriptSecrets secrets);
 

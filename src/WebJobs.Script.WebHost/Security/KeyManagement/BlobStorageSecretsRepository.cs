@@ -75,8 +75,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             return container;
         }
 
-        public override async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName)
+        public override async Task<ScriptSecrets> ReadAsync(ScriptSecretsType type, string functionName, ILogger logger)
         {
+            logger.LogInformation($"ZZ {nameof(BlobStorageSecretsRepository)}");
             string secretsContent = null;
             string blobPath = GetSecretsBlobPath(type, functionName);
             try

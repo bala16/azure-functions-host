@@ -125,11 +125,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         /// startup cache context.
         /// </summary>
         /// <param name="encryptedContext">The encrypted assignment context.</param>
+        /// <param name="logger">log</param>
         /// <returns>The decrypted assignment context</returns>
-        public virtual HostAssignmentContext SetContext(EncryptedHostAssignmentContext encryptedContext)
+        public virtual HostAssignmentContext SetContext(EncryptedHostAssignmentContext encryptedContext, ILogger logger)
         {
             string decryptedContext = SimpleWebTokenHelper.Decrypt(encryptedContext.EncryptedContext, environment: _environment);
             var hostAssignmentContext = JsonConvert.DeserializeObject<HostAssignmentContext>(decryptedContext);
+
+            logger.LogInformation("ZZ Applying secrets");
 
             // apply values from the context to our cached context
             Context = new StartupContext
