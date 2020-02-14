@@ -129,6 +129,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
                     environment.SetEnvironmentVariable(EnvironmentSettingNames.CorsAllowedOrigins, allowedOrigins);
                 }
             }
+
+            if (EasyAuthSettings != null)
+            {
+                // App settings take precedence over site config for easy auth enabled.
+                if (environment.GetEnvironmentVariable(EnvironmentSettingNames.EasyAuthEnabled) == null)
+                {
+                    environment.SetEnvironmentVariable(EnvironmentSettingNames.EasyAuthEnabled, EasyAuthSettings.SiteAuthEnabled.ToString());
+                }
+                environment.SetEnvironmentVariable(EnvironmentSettingNames.EasyAuthClientId, EasyAuthSettings.SiteAuthClientId);
+            }
         }
     }
 }

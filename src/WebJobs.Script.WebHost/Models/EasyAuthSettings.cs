@@ -9,6 +9,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
 
         public string SiteAuthClientId { get; set; }
 
-        public bool? SiteAuthAutoProvisioned { get; set; }
+        public bool? SiteAuthAutoProvisioned { get; set; } // TODO - we don't need this. Any antares changes needed before deleting?
     }
 }
