@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -112,10 +113,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
             return SiteId == other.SiteId && LastModifiedTime.CompareTo(other.LastModifiedTime) == 0;
         }
 
-        public void ApplyAppSettings(IEnvironment environment)
+        public void ApplyAppSettings(IEnvironment environment, ILogger logger)
         {
             foreach (var pair in Environment)
             {
+                if (pair.Key.StartsWith("WEBSITE_AUTH"))
+                {
+                    logger.LogWarning($"ApplyAppSettings {pair.Key} = {pair.Value}");
+                }
+
                 environment.SetEnvironmentVariable(pair.Key, pair.Value);
             }
 
@@ -135,8 +141,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
                 // App settings take precedence over site config for easy auth enabled.
                 if (environment.GetEnvironmentVariable(EnvironmentSettingNames.EasyAuthEnabled) == null)
                 {
+                    logger.LogWarning($"ApplyAppSettings Adding {EnvironmentSettingNames.EasyAuthEnabled} = {EasyAuthSettings.SiteAuthEnabled.ToString()}");
                     environment.SetEnvironmentVariable(EnvironmentSettingNames.EasyAuthEnabled, EasyAuthSettings.SiteAuthEnabled.ToString());
                 }
+                else
+                {
+                    logger.LogWarning($"ApplyAppSettings Existing {EnvironmentSettingNames.EasyAuthEnabled} = {environment.GetEnvironmentVariable(EnvironmentSettingNames.EasyAuthEnabled)}");
+                }
+
+                logger.LogWarning($"ApplyAppSettings Existing {EnvironmentSettingNames.EasyAuthClientId} = {EasyAuthSettings.SiteAuthClientId}");
                 environment.SetEnvironmentVariable(EnvironmentSettingNames.EasyAuthClientId, EasyAuthSettings.SiteAuthClientId);
             }
         }
