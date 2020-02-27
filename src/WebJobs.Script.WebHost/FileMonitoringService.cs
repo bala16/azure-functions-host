@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                         .Where(f => string.Equals(f.Source, EventSources.ScriptFiles, StringComparison.Ordinal))
                         .Subscribe(e => OnFileChanged(e.FileChangeArguments)));
 
-                _logger.LogDebug("File event source initialized.");
+                _logger.LogDebug("File event source initialized." + _scriptOptions?.RootScriptPath);
             }
 
             _eventSubscriptions.Add(_eventManager.OfType<HostRestartEvent>()

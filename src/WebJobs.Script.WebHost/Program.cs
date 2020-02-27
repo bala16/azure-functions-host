@@ -21,12 +21,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
     {
         public static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledException;
             InitializeProcess();
 
             var host = BuildWebHost(args);
 
             host.RunAsync()
                 .Wait();
+        }
+
+        private static void CurrentDomainOnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Console.WriteLine("**************");
+            Console.WriteLine(nameof(CurrentDomainOnUnhandledException));
+            Console.WriteLine(e.ExceptionObject.ToString());
+            Console.WriteLine(e.IsTerminating);
+            Console.WriteLine(e.ToString());
         }
 
         public static IWebHost BuildWebHost(string[] args)
@@ -80,6 +90,19 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         /// </summary>
         private static void InitializeProcess()
         {
+            if (string.IsNullOrEmpty(
+                SystemEnvironment.Instance.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName)))
+            {
+                Console.WriteLine("**************");
+                Console.WriteLine("Setting containername to 1");
+                SystemEnvironment.Instance.SetEnvironmentVariable(EnvironmentSettingNames.ContainerName, "1");
+            }
+            else
+            {
+                Console.WriteLine("**************");
+                Console.WriteLine("Leaving existing containername");
+            }
+
             if (SystemEnvironment.Instance.IsLinuxConsumption())
             {
                 // Linux containers always start out in placeholder mode

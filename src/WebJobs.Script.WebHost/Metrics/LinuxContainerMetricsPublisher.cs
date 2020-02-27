@@ -82,6 +82,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Metrics
             _httpClient = (httpClient != null) ? httpClient : CreateMetricsPublisherHttpClient();
             if (_standbyOptions.CurrentValue.InStandbyMode)
             {
+                if (string.Equals("1", _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName),
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("**************");
+                    Console.WriteLine("Starting publisher");
+                    Start();
+                }
                 _standbyOptionsOnChangeSubscription = _standbyOptions.OnChange(o => OnStandbyOptionsChange());
             }
             else

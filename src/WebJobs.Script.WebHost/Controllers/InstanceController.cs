@@ -1,6 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -23,6 +26,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IInstanceManager _instanceManager;
         private readonly ILogger _logger;
         private readonly StartupContextProvider _startupContextProvider;
+        private Timer _processMonitorTimer;
 
         public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider)
         {
@@ -72,6 +76,28 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
         }
 
+        [HttpPost]
+        [Route("admin/instance/assign2")]
+        [Authorize(Policy = PolicyNames.AdminAuthLevel)]
+        public async Task<IActionResult> Assign2([FromBody] HostAssignmentContext assignmentContext)
+        {
+            _logger.LogDebug($"Starting container assignment for host : {Request?.Host}. ContextLength is: {assignmentContext.SiteName}");
+
+            // before starting the assignment we want to perform as much
+            // up front validation on the context as possible
+            string error = await _instanceManager.ValidateContext(assignmentContext, false);
+            if (error != null)
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, error);
+            }
+
+            bool succeeded = _instanceManager.StartAssignment(assignmentContext, false);
+
+            return succeeded
+                ? Accepted()
+                : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
+        }
+
         [HttpGet]
         [Route("admin/instance/info")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
@@ -89,6 +115,61 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             // Mark the container disabled. We check for this on host restart
             await Utility.MarkContainerDisabled(_logger);
             var tIgnore = Task.Run(() => hostManager.RestartHostAsync());
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/crash")]
+        public string Crash()
+        {
+            string s = null;
+            return s.Length.ToString();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/bcrash")]
+        public void BCrash()
+        {
+            _processMonitorTimer = new Timer(OnBcrash, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+        }
+
+        private void OnBcrash(object state)
+        {
+            throw new Exception(nameof(BCrash));
+        }
+
+        [HttpGet]
+        [Route("admin/instance/bcrash2")]
+        public void BCrash2()
+        {
+            Task.Run(() => throw new Exception(nameof(BCrash2)));
+        }
+
+        [HttpGet]
+        [Route("admin/instance/bcrash3")]
+        public void BCrash3()
+        {
+            Task.Run(() => Thr());
+        }
+
+        private static void Thr()
+        {
+            Thread.Sleep(TimeSpan.FromSeconds(5));
+            throw new Exception(nameof(Thr));
+        }
+
+        [HttpGet]
+        [Route("admin/instance/bcrash4")]
+        public void BCrash4()
+        {
+            Task.Run(() => Thr()).Wait();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/processexit")]
+        public IActionResult ProcessExit()
+        {
+            Process.GetCurrentProcess().Kill();
             return Ok();
         }
     }
