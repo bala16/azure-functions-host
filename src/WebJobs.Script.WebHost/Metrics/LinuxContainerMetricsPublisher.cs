@@ -251,10 +251,27 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Metrics
         public void Start()
         {
             Initialize();
+            _processMonitorTimer = new Timer(OnCpuTimer, null, TimeSpan.Zero, TimeSpan.FromSeconds(60));
             _processMonitorTimer = new Timer(OnProcessMonitorTimer, null, TimeSpan.Zero, _memorySnapshotInterval);
             _metricsPublisherTimer = new Timer(OnFunctionMetricsPublishTimer, null, TimeSpan.Zero, _metricPublishInterval);
 
             _logger.LogInformation(string.Format("Starting metrics publisher for container : {0}. Publishing endpoint is {1}", _containerName, _requestUri));
+        }
+
+        private void OnCpuTimer(object state)
+        {
+            try
+            {
+                var processorCount = Environment.ProcessorCount;
+                var processTotalProcessorTime = _process.TotalProcessorTime;
+                _logger.LogError($"{processorCount} = {processTotalProcessorTime}");
+            }
+            catch (Exception e)
+            {
+                // throwing this exception will mask other underlying exceptions.
+                // Log and let other interesting exceptions bubble up.
+                _logger.LogError(e, nameof(OnCpuTimer));
+            }
         }
 
         private void OnProcessMonitorTimer(object state)
