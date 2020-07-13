@@ -47,15 +47,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             // This is to PreJIT all methods captured in coldstart.jittrace file to improve cold start time
             var path = Path.Combine(Path.GetDirectoryName(new Uri(typeof(HostWarmupMiddleware).Assembly.CodeBase).LocalPath), WarmUpConstants.PreJitFolderName, WarmUpConstants.JitTraceFileName);
 
+            _logger.LogInformation($"Path = {path}");
+
             var file = new FileInfo(path);
 
-            if (file.Exists)
+            var fileExists = file.Exists;
+
+            _logger.LogInformation($"fileExists = {fileExists}");
+
+            if (fileExists)
             {
+                _logger.LogInformation($"prepare");
+
                 JitTraceRuntime.Prepare(file, out int successfulPrepares, out int failedPrepares);
 
                 // We will need to monitor failed vs success prepares and if the failures increase, it means code paths have diverged or there have been updates on dotnet core side.
                 // When this happens, we will need to regenerate the coldstart.jittrace file.
                 _logger.LogInformation(new EventId(100, "PreJit"), $"PreJIT Successful prepares: {successfulPrepares}, Failed prepares: {failedPrepares}");
+                _logger.LogInformation($"PreJIT Successful prepares: {successfulPrepares}, Failed prepares: {failedPrepares}");
             }
         }
 
@@ -63,6 +72,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
         {
             if (request.Query.TryGetValue("restart", out StringValues value) && string.Compare("1", value) == 0)
             {
+                _logger.LogInformation($"restart");
+
                 await _hostManager.RestartHostAsync(CancellationToken.None);
 
                 // This call is here for sanity, but we should be fully initialized.
