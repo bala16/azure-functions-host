@@ -251,8 +251,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Metrics
         public void Start()
         {
             Initialize();
-            _processMonitorTimer = new Timer(OnProcessMonitorTimer, null, TimeSpan.Zero, _memorySnapshotInterval);
-            _metricsPublisherTimer = new Timer(OnFunctionMetricsPublishTimer, null, TimeSpan.Zero, _metricPublishInterval);
+            _processMonitorTimer = new Timer(OnProcessMonitorTimer, null, TimeSpan.FromSeconds(2), _memorySnapshotInterval);
+            _metricsPublisherTimer = new Timer(OnFunctionMetricsPublishTimer, null, TimeSpan.FromSeconds(2), _metricPublishInterval);
 
             _logger.LogInformation(string.Format("Starting metrics publisher for container : {0}. Publishing endpoint is {1}", _containerName, _requestUri));
         }
