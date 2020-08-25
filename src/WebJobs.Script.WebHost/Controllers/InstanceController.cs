@@ -1,14 +1,23 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -90,6 +99,119 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpPost]
+        [Route("admin/instance/stream-zip")]
+        public async Task<IActionResult> Stream()
+        {
+            var messages = new List<string>();
+            try
+            {
+                var boundary = GetBoundary(
+                    MediaTypeHeaderValue.Parse(Request.ContentType),
+                    new FormOptions().MultipartBoundaryLengthLimit);
+
+                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
+
+                Console.WriteLine("Reading metadata");
+                messages.Add("Reading metadata");
+                var section1 = await reader.ReadNextSectionAsync();
+                var streamReader = new StreamReader(section1.Body);
+                string content1 = await streamReader.ReadToEndAsync();
+                var deserializeObject = JsonConvert.DeserializeObject<Dictionary<string, string>>(content1);
+
+                var zipMetadataString = deserializeObject["zipMetadata"];
+                var zipMetadata = JsonConvert.DeserializeObject<ZipMetadata>(zipMetadataString);
+                Console.WriteLine(zipMetadata.ToString());
+                messages.Add($"ZipMetadata = {zipMetadata.ToString()}");
+
+                Console.WriteLine("Reading section 2");
+                messages.Add("Reading section 2");
+
+                var section2 = await reader.ReadNextSectionAsync();
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    await section2.Body.CopyToAsync(memoryStream);
+
+                    using (var fs = new FileStream(Path.Combine("/home", "a100.zip"), FileMode.Append,
+                        FileAccess.Write))
+                    {
+                        Console.WriteLine($"{DateTime.UtcNow} Writing to file stream chunk");
+                        messages.Add($"{DateTime.UtcNow} Writing to file stream chunk");
+
+                        memoryStream.Seek(0, SeekOrigin.Begin);
+                        await memoryStream.CopyToAsync(fs);
+                        fs.Flush();
+                    }
+                }
+
+                Console.WriteLine("Returning Ok");
+                messages.Add("Returning Ok");
+
+                var stringBuilder = new StringBuilder();
+                foreach (var message in messages)
+                {
+                    stringBuilder.Append(message);
+                    stringBuilder.Append(Environment.NewLine);
+                }
+
+                stringBuilder.Append("End of messages ");
+                stringBuilder.Append(Environment.NewLine);
+
+                return Ok(stringBuilder.ToString());
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+
+                var stringBuilder = new StringBuilder();
+                foreach (var message in messages)
+                {
+                    stringBuilder.Append(message);
+                    stringBuilder.Append(Environment.NewLine);
+                }
+
+                stringBuilder.Append("End of messages ");
+                stringBuilder.Append(Environment.NewLine);
+
+                stringBuilder.Append(e.ToString());
+
+                return BadRequest(stringBuilder.ToString());
+            }
+        }
+
+        [HttpGet]
+        [Route("admin/instance/list-home")]
+        public Task<string> GetList()
+        {
+            var stringBuilder = new StringBuilder();
+            foreach (string enumerateFileSystemEntry in Directory.EnumerateFileSystemEntries("/home"))
+            {
+                stringBuilder.Append(enumerateFileSystemEntry);
+                stringBuilder.Append(Environment.NewLine);
+            }
+
+            return Task.FromResult(stringBuilder.ToString());
+        }
+
+        private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
+        {
+            var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary).Value;
+
+            if (string.IsNullOrWhiteSpace(boundary))
+            {
+                throw new InvalidDataException("Missing content-type boundary.");
+            }
+
+            if (boundary.Length > lengthLimit)
+            {
+                throw new InvalidDataException(
+                    $"Multipart boundary length limit {lengthLimit} exceeded.");
+            }
+
+            return boundary;
         }
     }
 }
