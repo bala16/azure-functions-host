@@ -31,6 +31,11 @@ namespace Microsoft.Azure.WebJobs.Script.Extensions
             return request.Path.StartsWithSegments("/admin/functions/download");
         }
 
+        public static bool IsStreamUploadRequest(this HttpRequest request)
+        {
+            return request.Path.StartsWithSegments("/admin/instance/stream-zip");
+        }
+
         public static TValue GetRequestPropertyOrDefault<TValue>(this HttpRequest request, string key)
         {
             if (request.HttpContext != null &&
