@@ -6,12 +6,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
@@ -32,13 +32,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IInstanceManager _instanceManager;
         private readonly ILogger _logger;
         private readonly StartupContextProvider _startupContextProvider;
+        private readonly ZipFileDownloadService _zipFileDownloadService;
+        private static readonly List<string> Messages = new List<string>();
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider, ZipFileDownloadService zipFileDownloadService)
         {
             _environment = environment;
             _instanceManager = instanceManager;
             _logger = loggerFactory.CreateLogger<InstanceController>();
             _startupContextProvider = startupContextProvider;
+            _zipFileDownloadService = zipFileDownloadService;
         }
 
         [HttpPost]
@@ -47,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public async Task<IActionResult> Assign([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
         {
             _logger.LogDebug($"Starting container assignment for host : {Request?.Host}. ContextLength is: {encryptedAssignmentContext.EncryptedContext?.Length}");
+            Messages.Add("Starting admin/instance/assign");
 
             var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext);
 
@@ -67,6 +71,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             }
 
             var succeeded = _instanceManager.StartAssignment(assignmentContext);
+
+            Messages.Add($"admin/instance/assign response = {succeeded}");
 
             return succeeded
                 ? Accepted()
@@ -101,10 +107,34 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return Ok();
         }
 
+        [HttpGet]
+        [Route("admin/instance/get-logs")]
+        public string GetLogs()
+        {
+            var stringBuilder = new StringBuilder();
+            foreach (var message in Messages)
+            {
+                stringBuilder.Append(message);
+                stringBuilder.Append(Environment.NewLine);
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        private static string GetZipDestinationPath(string zipFileName)
+        {
+            var tmpPath = Path.GetTempPath();
+            var fileName = Path.GetFileName(zipFileName);
+            var filePath = Path.Combine(tmpPath, zipFileName);
+            return filePath;
+        }
+
         [HttpPost]
         [Route("admin/instance/stream-zip")]
         public async Task<IActionResult> Stream()
         {
+            string filePath = GetZipDestinationPath("download.zip");
+
             var messages = new List<string>();
             try
             {
@@ -114,7 +144,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
 
-                Console.WriteLine("Reading metadata");
                 messages.Add("Reading metadata");
                 var section1 = await reader.ReadNextSectionAsync();
                 var streamReader = new StreamReader(section1.Body);
@@ -123,10 +152,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var zipMetadataString = deserializeObject["zipMetadata"];
                 var zipMetadata = JsonConvert.DeserializeObject<ZipMetadata>(zipMetadataString);
-                Console.WriteLine(zipMetadata.ToString());
                 messages.Add($"ZipMetadata = {zipMetadata.ToString()}");
 
-                Console.WriteLine("Reading section 2");
                 messages.Add("Reading section 2");
 
                 var section2 = await reader.ReadNextSectionAsync();
@@ -147,20 +174,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     }
                 }
 
-                Console.WriteLine("Returning Ok");
-                messages.Add("Returning Ok");
-
-                var stringBuilder = new StringBuilder();
-                foreach (var message in messages)
-                {
-                    stringBuilder.Append(message);
-                    stringBuilder.Append(Environment.NewLine);
-                }
-
-                stringBuilder.Append("End of messages ");
-                stringBuilder.Append(Environment.NewLine);
-
-                return Ok(stringBuilder.ToString());
+                messages.Add($"Returning Ok. Downloaded at {filePath}");
+                _zipFileDownloadService.NotifyDownloadComplete(filePath);
+                return Ok();
             }
             catch (Exception e)
             {
@@ -176,7 +192,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 stringBuilder.Append("End of messages ");
                 stringBuilder.Append(Environment.NewLine);
 
-                stringBuilder.Append(e.ToString());
+                stringBuilder.Append(e);
+
+                stringBuilder.Append(Environment.NewLine);
+                stringBuilder.Append($"Download failed");
+
+                _zipFileDownloadService.NotifyDownloadComplete(string.Empty);
 
                 return BadRequest(stringBuilder.ToString());
             }
@@ -187,7 +208,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public Task<string> GetList()
         {
             var stringBuilder = new StringBuilder();
-            foreach (string enumerateFileSystemEntry in Directory.EnumerateFileSystemEntries("/home"))
+            foreach (var enumerateFileSystemEntry in Directory.EnumerateFileSystemEntries("/home"))
             {
                 stringBuilder.Append(enumerateFileSystemEntry);
                 stringBuilder.Append(Environment.NewLine);
