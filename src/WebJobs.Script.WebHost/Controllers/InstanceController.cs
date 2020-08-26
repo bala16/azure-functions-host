@@ -134,6 +134,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public async Task<IActionResult> Stream()
         {
             string filePath = GetZipDestinationPath("download.zip");
+            _logger.LogInformation($"BBB Zip cache downloading to {filePath}");
 
             var messages = new List<string>();
             try
@@ -145,6 +146,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
 
                 messages.Add("Reading metadata");
+                _logger.LogInformation("BBB Reading metadata");
+
                 var section1 = await reader.ReadNextSectionAsync();
                 var streamReader = new StreamReader(section1.Body);
                 string content1 = await streamReader.ReadToEndAsync();
@@ -152,9 +155,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var zipMetadataString = deserializeObject["zipMetadata"];
                 var zipMetadata = JsonConvert.DeserializeObject<ZipMetadata>(zipMetadataString);
-                messages.Add($"ZipMetadata = {zipMetadata.ToString()}");
+                messages.Add($"ZipMetadata = {zipMetadata}");
+                _logger.LogInformation($"BBB ZipMetadata = {zipMetadata}");
 
                 messages.Add("Reading section 2");
+                _logger.LogInformation("BBB Reading section 2");
 
                 var section2 = await reader.ReadNextSectionAsync();
 
@@ -162,19 +167,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 {
                     await section2.Body.CopyToAsync(memoryStream);
 
-                    using (var fs = new FileStream(Path.Combine("/home", "a100.zip"), FileMode.Append,
+                    using (var fs = new FileStream(filePath, FileMode.Append,
                         FileAccess.Write))
                     {
                         Console.WriteLine($"{DateTime.UtcNow} Writing to file stream chunk");
                         messages.Add($"{DateTime.UtcNow} Writing to file stream chunk");
+                        _logger.LogInformation($"BBB {DateTime.UtcNow} Writing to file stream chunk");
 
                         memoryStream.Seek(0, SeekOrigin.Begin);
+                        _logger.LogInformation($"BBB Writing {memoryStream.Length} bytes");
                         await memoryStream.CopyToAsync(fs);
                         fs.Flush();
                     }
                 }
 
-                messages.Add($"Returning Ok. Downloaded at {filePath}");
+                messages.Add($"BBB Returning Ok. Downloaded at {filePath}");
+                _logger.LogInformation($"BBB Returning Ok. Downloaded at {filePath}");
                 _zipFileDownloadService.NotifyDownloadComplete(filePath);
                 return Ok();
             }
@@ -200,6 +208,38 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 _zipFileDownloadService.NotifyDownloadComplete(string.Empty);
 
                 return BadRequest(stringBuilder.ToString());
+            }
+        }
+
+        [HttpGet]
+        [Route("admin/instance/get-info")]
+        public string In()
+        {
+            try
+            {
+                var stringBuilder = new StringBuilder();
+                stringBuilder.AppendLine(
+                    $"Container name = {Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName)}");
+
+                string filePath = GetZipDestinationPath("download.zip");
+
+                stringBuilder.AppendLine($"Path = {filePath}");
+
+                var fileInfo = new FileInfo(filePath);
+
+                stringBuilder.AppendLine($"Length = {fileInfo.Length}");
+                stringBuilder.AppendLine($"Name = {fileInfo.Name}");
+                stringBuilder.AppendLine($"Directory = {fileInfo.Directory}");
+                stringBuilder.AppendLine($"DirectoryName = {fileInfo.DirectoryName}");
+                stringBuilder.AppendLine($"FullName = {fileInfo.FullName}");
+                stringBuilder.AppendLine($"CreationTime = {fileInfo.CreationTime}");
+                stringBuilder.AppendLine($"LastWriteTime = {fileInfo.LastWriteTime}");
+
+                return stringBuilder.ToString();
+            }
+            catch (Exception e)
+            {
+                return e.ToString();
             }
         }
 

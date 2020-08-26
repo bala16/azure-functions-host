@@ -355,7 +355,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         {
             _logger.LogInformation($"BBB Waiting for zip cache download");
 
-            var zipCacheDownloadPath = _zipFileDownloadService.WaitForDownload(TimeSpan.FromSeconds(5));
+            var zipCacheDownloadPath = _zipFileDownloadService.WaitForDownload(TimeSpan.FromSeconds(20));
 
             _logger.LogInformation($"BBB Wait complete for zip cache download. Path = {zipCacheDownloadPath}");
 
