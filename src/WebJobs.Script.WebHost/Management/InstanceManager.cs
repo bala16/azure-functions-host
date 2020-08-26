@@ -362,6 +362,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             if (!string.IsNullOrEmpty(zipCacheDownloadPath))
             {
                 _logger.LogInformation($"BBB Zip cache download success");
+                _logger.LogInformation($"Waiting 5 seconds for download to complete");
+                await Task.Delay(TimeSpan.FromSeconds(5)); // REMOVE
                 return zipCacheDownloadPath;
             }
 
