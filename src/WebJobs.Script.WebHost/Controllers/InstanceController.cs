@@ -131,7 +131,39 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpPost]
         [Route("admin/instance/stream-zip")]
-        public async Task<IActionResult> Stream()
+        public async Task<IActionResult> Stream([FromServices] StreamerService streamerService)
+        {
+            _logger.LogInformation($"Invoked {nameof(Stream)}");
+
+            try
+            {
+                var boundary = GetBoundary(
+                    MediaTypeHeaderValue.Parse(Request.ContentType),
+                    new FormOptions().MultipartBoundaryLengthLimit);
+
+                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
+
+                _logger.LogInformation("BBB Reading metadata");
+                var metadataSection = await reader.ReadNextSectionAsync();
+                await streamerService.HandleMetadata(metadataSection);
+
+                _logger.LogInformation("BBB Reading ZipContent");
+                var zipContentSection = await reader.ReadNextSectionAsync();
+                await streamerService.HandleZipContent(zipContentSection);
+
+                _logger.LogInformation($"BBB Both sections read");
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(Stream));
+                return BadRequest(e.ToString());
+            }
+        }
+
+        [HttpPost]
+        [Route("admin/instance/stream-zip-old")]
+        public async Task<IActionResult> StreamOld()
         {
             string filePath = GetZipDestinationPath("download.zip");
             _logger.LogInformation($"BBB Zip cache downloading to {filePath}");

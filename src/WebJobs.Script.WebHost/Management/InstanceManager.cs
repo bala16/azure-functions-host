@@ -363,7 +363,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             {
                 _logger.LogInformation($"BBB Zip cache download success");
                 _logger.LogInformation($"Waiting 5 seconds for download to complete");
-                await Task.Delay(TimeSpan.FromSeconds(5)); // REMOVE
+                // await Task.Delay(TimeSpan.FromSeconds(5)); // REMOVE
                 return zipCacheDownloadPath;
             }
 
@@ -376,11 +376,45 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return filePath;
         }
 
+        private async Task<string> GetWinner(RunFromPackageContext pkgContext)
+        {
+            Task<string> downloadTask = GetDownloadTask(pkgContext);
+            Task<string> streamTask = GetStreamDownloadTask();
+            Task<string> winner = await Task.WhenAny(downloadTask, streamTask);
+            if (winner == downloadTask)
+            {
+                _logger.LogInformation($"BBB Download task won = {winner.Result}");
+            }
+            else
+            {
+                _logger.LogInformation($"BBB Stream task won = {winner.Result}");
+            }
+
+            return winner.Result;
+        }
+
+        private Task<string> GetStreamDownloadTask()
+        {
+            _logger.LogInformation($"BBB Triggering stream download task");
+            var streamedPath = _zipFileDownloadService.WaitForDownload(TimeSpan.FromSeconds(30));
+            _logger.LogInformation($"BBB Streaming download task complete at path = {streamedPath}");
+            return Task.FromResult(streamedPath);
+        }
+
+        private async Task<string> GetDownloadTask(RunFromPackageContext pkgContext)
+        {
+            _logger.LogInformation($"BBB Triggering regular download task");
+            var filePath = await Download(pkgContext);
+            _logger.LogInformation($"BBB Regular download task complete at path = {filePath}");
+            return filePath;
+        }
+
         private async Task ApplyBlobPackageContext(RunFromPackageContext pkgContext, string targetPath)
         {
             // download zip and extract
 
-            var filePath = await GetDownloadedPath(pkgContext);
+            // var filePath = await GetDownloadedPath(pkgContext);
+            var filePath = await GetWinner(pkgContext);
             await UnpackPackage(filePath, targetPath, pkgContext);
 
             string bundlePath = Path.Combine(targetPath, "worker-bundle");

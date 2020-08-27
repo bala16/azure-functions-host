@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 
         public string WaitForDownload(TimeSpan timeSpan)
         {
-            _logger.LogInformation($"BBB Waiting for download complete");
+            _logger.LogInformation("BBB Waiting for download complete");
             _evt.WaitOne(timeSpan);
             return _path;
         }
