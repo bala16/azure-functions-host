@@ -136,7 +136,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             string filePath = GetZipDestinationPath("download.zip");
             _logger.LogInformation($"BBB Zip cache downloading to {filePath}");
 
-            var messages = new List<string>();
             try
             {
                 var boundary = GetBoundary(
@@ -145,20 +144,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
 
-                messages.Add("Reading metadata");
                 _logger.LogInformation("BBB Reading metadata");
 
                 var section1 = await reader.ReadNextSectionAsync();
                 var streamReader = new StreamReader(section1.Body);
                 string content1 = await streamReader.ReadToEndAsync();
-                var deserializeObject = JsonConvert.DeserializeObject<Dictionary<string, string>>(content1);
+                var zipMetadata = JsonConvert.DeserializeObject<ZipMetadata>(content1);
+                _logger.LogInformation($"BBB ZipMetadata read = {zipMetadata}");
 
-                var zipMetadataString = deserializeObject["zipMetadata"];
-                var zipMetadata = JsonConvert.DeserializeObject<ZipMetadata>(zipMetadataString);
-                messages.Add($"ZipMetadata = {zipMetadata}");
-                _logger.LogInformation($"BBB ZipMetadata = {zipMetadata}");
-
-                messages.Add("Reading section 2");
                 _logger.LogInformation("BBB Reading section 2");
 
                 var section2 = await reader.ReadNextSectionAsync();
@@ -170,8 +163,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     using (var fs = new FileStream(filePath, FileMode.Append,
                         FileAccess.Write))
                     {
-                        Console.WriteLine($"{DateTime.UtcNow} Writing to file stream chunk");
-                        messages.Add($"{DateTime.UtcNow} Writing to file stream chunk");
                         _logger.LogInformation($"BBB {DateTime.UtcNow} Writing to file stream chunk");
 
                         memoryStream.Seek(0, SeekOrigin.Begin);
@@ -181,7 +172,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     }
                 }
 
-                messages.Add($"BBB Returning Ok. Downloaded at {filePath}");
                 _logger.LogInformation($"BBB Returning Ok. Downloaded at {filePath}");
                 _zipFileDownloadService.NotifyDownloadComplete(filePath);
                 return Ok();
@@ -189,24 +179,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             catch (Exception e)
             {
                 Console.WriteLine(e);
-
                 var stringBuilder = new StringBuilder();
-                foreach (var message in messages)
-                {
-                    stringBuilder.Append(message);
-                    stringBuilder.Append(Environment.NewLine);
-                }
-
-                stringBuilder.Append("End of messages ");
-                stringBuilder.Append(Environment.NewLine);
-
                 stringBuilder.Append(e);
-
                 stringBuilder.Append(Environment.NewLine);
                 stringBuilder.Append($"Download failed");
-
                 _zipFileDownloadService.NotifyDownloadComplete(string.Empty);
-
                 return BadRequest(stringBuilder.ToString());
             }
         }

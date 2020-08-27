@@ -10,20 +10,20 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
     public class ZipFileDownloadService
     {
         private readonly ILogger<ZipFileDownloadService> _logger;
-        private readonly ManualResetEventSlim _evt;
+        private readonly ManualResetEvent _evt;
         private string _path = string.Empty;
 
         public ZipFileDownloadService(ILogger<ZipFileDownloadService> logger)
         {
             _logger = logger;
-            _evt = new ManualResetEventSlim(false);
+            _evt = new ManualResetEvent(false);
             _logger.LogInformation($"BBB Starting {nameof(ZipFileDownloadService)}");
         }
 
         public string WaitForDownload(TimeSpan timeSpan)
         {
             _logger.LogInformation($"BBB Waiting for download complete");
-            _evt.Wait(timeSpan);
+            _evt.WaitOne(timeSpan);
             return _path;
         }
 
