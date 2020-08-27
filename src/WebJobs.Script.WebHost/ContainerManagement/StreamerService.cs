@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         {
             var fileName = Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName) ?? "zip-stream";
             var tmpPath = Path.GetTempPath();
-            return Path.Combine(tmpPath, fileName, ".zip");
+            return Path.Combine(tmpPath, $"{fileName}.zip");
         }
 
         private void SetTotalBytes(long bytes)
