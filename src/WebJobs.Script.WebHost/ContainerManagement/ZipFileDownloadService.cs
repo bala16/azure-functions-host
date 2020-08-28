@@ -12,12 +12,42 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         private readonly ILogger<ZipFileDownloadService> _logger;
         private readonly ManualResetEvent _evt;
         private string _path = string.Empty;
+        private DateTime? _startTime = null;
+        private DateTime? _finishTime = null;
 
         public ZipFileDownloadService(ILogger<ZipFileDownloadService> logger)
         {
             _logger = logger;
             _evt = new ManualResetEvent(false);
             _logger.LogInformation($"BBB Starting {nameof(ZipFileDownloadService)}");
+        }
+
+        public void NotifyDownloadStart()
+        {
+            if (_startTime == null)
+            {
+                _logger.LogInformation($"BBB XStream download started");
+                _startTime = DateTime.UtcNow;
+            }
+        }
+
+        private void MarkComplete()
+        {
+            if (_finishTime == null)
+            {
+                _logger.LogInformation("BBB XStream download finished");
+                _finishTime = DateTime.UtcNow;
+            }
+            else
+            {
+                throw new Exception($"Multiple completes");
+            }
+        }
+
+        public void LogTimeTaken()
+        {
+            TimeSpan timeSpan = _finishTime.Value.Subtract(_startTime.Value);
+            _logger.LogInformation($"BBB Total XStream time taken ms = {timeSpan.TotalMilliseconds}");
         }
 
         public string WaitForDownload(TimeSpan timeSpan)
@@ -31,6 +61,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         {
             _path = path;
             _logger.LogInformation($"BBB Marking download complete = {_path}");
+            MarkComplete();
             _evt.Set();
         }
     }

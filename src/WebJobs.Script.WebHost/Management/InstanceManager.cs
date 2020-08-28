@@ -156,12 +156,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             {
                 // In AppService, ZipUrl == 1 means the package is hosted in azure files.
                 // Otherwise we expect zipUrl to be a blobUri to a zip or a squashfs image
+
+                _logger.LogInformation("BBB Skipping URL HEAD validation");
+                assignmentContext.PackageContentLength = null;
+                return null;
+                /*
+
                 (var error, var contentLength) = await ValidateBlobPackageContext(pkgContext);
                 if (string.IsNullOrEmpty(error))
                 {
                     assignmentContext.PackageContentLength = contentLength;
                 }
-                return error;
+                return error; */
             }
             else if (!string.IsNullOrEmpty(assignmentContext.AzureFilesConnectionString))
             {
@@ -393,11 +399,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return winner.Result;
         }
 
+        private async Task<string> PickWinner(RunFromPackageContext pkgContext, bool streamTask)
+        {
+            _logger.LogInformation($"Triggering = {streamTask}");
+            return streamTask ? await GetStreamDownloadTask() : await GetDownloadTask(pkgContext);
+        }
+
         private Task<string> GetStreamDownloadTask()
         {
             _logger.LogInformation($"BBB Triggering stream download task");
             var streamedPath = _zipFileDownloadService.WaitForDownload(TimeSpan.FromSeconds(30));
             _logger.LogInformation($"BBB Streaming download task complete at path = {streamedPath}");
+            _zipFileDownloadService.LogTimeTaken();
             return Task.FromResult(streamedPath);
         }
 
@@ -414,7 +427,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             // download zip and extract
 
             // var filePath = await GetDownloadedPath(pkgContext);
-            var filePath = await GetWinner(pkgContext);
+            // var filePath = await GetWinner(pkgContext);
+            var filePath = await PickWinner(pkgContext, true);
             await UnpackPackage(filePath, targetPath, pkgContext);
 
             string bundlePath = Path.Combine(targetPath, "worker-bundle");

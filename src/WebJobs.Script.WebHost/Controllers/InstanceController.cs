@@ -135,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [DisableFormValueModelBinding]
         public async Task<IActionResult> Stream([FromServices] StreamerService streamerService)
         {
-            _logger.LogInformation($"Invoked {nameof(Stream)}");
+            _logger.LogInformation($"BBB Invoked {nameof(Stream)}");
 
             try
             {
@@ -145,15 +145,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
 
-                _logger.LogInformation("BBB Reading metadata");
                 var metadataSection = await reader.ReadNextSectionAsync();
                 await streamerService.HandleMetadata(metadataSection);
 
-                _logger.LogInformation("BBB Reading ZipContent");
                 var zipContentSection = await reader.ReadNextSectionAsync();
                 await streamerService.HandleZipContent(zipContentSection);
 
-                _logger.LogInformation($"BBB Both sections read");
                 return Ok();
             }
             catch (Exception e)

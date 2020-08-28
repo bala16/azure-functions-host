@@ -101,6 +101,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 
         public async Task HandleMetadata(MultipartSection section)
         {
+            _zipFileDownloadService.NotifyDownloadStart();
+
             try
             {
                 if (section == null)
