@@ -428,7 +428,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             // var filePath = await GetDownloadedPath(pkgContext);
             // var filePath = await GetWinner(pkgContext);
-            var filePath = await PickWinner(pkgContext, true);
+            var filePath = await PickWinner(pkgContext, false);
             await UnpackPackage(filePath, targetPath, pkgContext);
 
             string bundlePath = Path.Combine(targetPath, "worker-bundle");
