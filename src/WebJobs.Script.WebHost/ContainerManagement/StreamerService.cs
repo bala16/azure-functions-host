@@ -126,7 +126,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             }
         }
 
-        public async Task HandleZipContent(MultipartSection zipContentSection)
+        public async Task HandleZipContentOld(MultipartSection zipContentSection)
         {
             try
             {
@@ -154,6 +154,38 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                             _logger.LogInformation("All bytes read. Signalling download complete");
                             _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
                         }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(HandleZipContentOld));
+                _zipFileDownloadService.NotifyDownloadComplete(null);
+            }
+        }
+
+        public async Task HandleZipContent(MultipartSection zipContentSection)
+        {
+            try
+            {
+                if (zipContentSection == null)
+                {
+                    throw new ArgumentException(nameof(zipContentSection));
+                }
+
+                using (var fs = new FileStream(GetZipDestinationPath(), FileMode.Append,
+                    FileAccess.Write))
+                {
+                    await zipContentSection.Body.CopyToAsync(fs);
+
+                    var length = zipContentSection.Body.Length;
+                    _logger.LogInformation($"BBB {DateTime.UtcNow} Writing to file stream chunk. bytes = {length} fs.Length = {fs.Length}");
+                    fs.Flush(); // flush once at the end?
+
+                    if (AllBytesRead(length))
+                    {
+                        _logger.LogInformation("All bytes read. Signalling download complete");
+                        _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
                     }
                 }
             }
