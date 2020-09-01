@@ -3,10 +3,14 @@
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Azure.AppService.Proxy.Common.Constants;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
+using Microsoft.Azure.WebJobs.Script.WebHost.Security;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -16,14 +20,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
     {
         private readonly ZipFileDownloadService _zipFileDownloadService;
         private readonly ILogger<StreamerService> _logger;
+        private readonly IEnvironment _environment;
         private readonly ReaderWriterLockSlim _readerWriterLockSlim;
         private long _totalBytes = long.MinValue;
         private long _bytesReadSoFar = 0;
 
-        public StreamerService(ZipFileDownloadService zipFileDownloadService, ILogger<StreamerService> logger)
+        public StreamerService(ZipFileDownloadService zipFileDownloadService, ILogger<StreamerService> logger, IEnvironment environment)
         {
             _zipFileDownloadService = zipFileDownloadService;
             _logger = logger;
+            _environment = environment;
             _readerWriterLockSlim = new ReaderWriterLockSlim();
         }
 
@@ -173,6 +179,53 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                     throw new ArgumentException(nameof(zipContentSection));
                 }
 
+                using (var memoryStream = new MemoryStream())
+                {
+                    await zipContentSection.Body.CopyToAsync(memoryStream);
+                    var length = memoryStream.Length;
+
+                    _logger.LogInformation(
+                        $"BBB {DateTime.UtcNow} Section len bytes = {zipContentSection.Body.Length} memoryStream.Length = {length}");
+
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    var s = Encoding.UTF8.GetString(memoryStream.ToArray());
+                    var environmentVariable = _environment.GetEnvironmentVariable(EnvironmentSettingNames.WebSiteAuthEncryptionKey);
+                    var decrypt = SimpleWebTokenHelper.DecryptBytes(environmentVariable.ToKeyBytes(), s);
+
+                    using (var fs = new FileStream(GetZipDestinationPath(), FileMode.Append,
+                        FileAccess.Write))
+                    {
+                        await fs.WriteAsync(decrypt);
+
+                        fs.Flush(); // flush once at the end?
+
+                        _logger.LogInformation(
+                            $"BBB {DateTime.UtcNow} Decrypted len = {decrypt.Length} fs so far len = {fs.Length}");
+
+                        if (AllBytesRead(decrypt.Length))
+                        {
+                            _logger.LogInformation("All bytes read. Signalling download complete");
+                            _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(HandleZipContent));
+                _zipFileDownloadService.NotifyDownloadComplete(null);
+            }
+        }
+
+        public async Task HandleZipContentWithoutEncryption(MultipartSection zipContentSection)
+        {
+            try
+            {
+                if (zipContentSection == null)
+                {
+                    throw new ArgumentException(nameof(zipContentSection));
+                }
+
                 using (var fs = new FileStream(GetZipDestinationPath(), FileMode.Append,
                     FileAccess.Write))
                 {
@@ -191,7 +244,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             }
             catch (Exception e)
             {
-                _logger.LogWarning(e, nameof(HandleZipContent));
+                _logger.LogWarning(e, nameof(HandleZipContentWithoutEncryption));
                 _zipFileDownloadService.NotifyDownloadComplete(null);
             }
         }
