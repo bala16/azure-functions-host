@@ -136,6 +136,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         {
             try
             {
+                _logger.LogInformation($"{nameof(HandleZipContent)}");
                 if (zipContentSection == null)
                 {
                     throw new ArgumentException(nameof(zipContentSection));
@@ -174,6 +175,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         {
             try
             {
+                _logger.LogInformation($"{nameof(HandleZipContent)}");
                 if (zipContentSection == null)
                 {
                     throw new ArgumentException(nameof(zipContentSection));
@@ -221,6 +223,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         {
             try
             {
+                _logger.LogInformation($"{nameof(HandleZipContentWithoutEncryption)}");
                 if (zipContentSection == null)
                 {
                     throw new ArgumentException(nameof(zipContentSection));
