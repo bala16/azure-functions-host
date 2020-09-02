@@ -127,6 +127,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             services.TryAddSingleton<ISecretManagerProvider, DefaultSecretManagerProvider>();
             services.AddSingleton<ZipFileDownloadService>();
             services.AddSingleton<StreamerService>();
+            services.AddSingleton<SingleStreamerService>();
 
             // Register common services with the WebHost
             // Language Worker Hosted Services need to be intialized before WebJobsScriptHostService

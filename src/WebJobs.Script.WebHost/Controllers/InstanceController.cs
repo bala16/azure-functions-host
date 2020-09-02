@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -128,6 +129,46 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             var fileName = Path.GetFileName(zipFileName);
             var filePath = Path.Combine(tmpPath, zipFileName);
             return filePath;
+        }
+
+        [HttpPost]
+        [Route("admin/instance/stream-zip-single")]
+        public async Task<IActionResult> StreamSingle([FromServices] SingleStreamerService streamerService)
+        {
+            _logger.LogInformation($"BBB Invoked {nameof(StreamSingle)}");
+
+            var stopwatch = Stopwatch.StartNew();
+            bool success = true;
+
+            try
+            {
+                var boundary = GetBoundary(
+                    MediaTypeHeaderValue.Parse(Request.ContentType),
+                    new FormOptions().MultipartBoundaryLengthLimit);
+
+                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
+
+                var metadataSection = await reader.ReadNextSectionAsync();
+                await streamerService.HandleMetadata(metadataSection);
+
+                var zipContentSection = await reader.ReadNextSectionAsync();
+                await streamerService.HandleZipAllContent(zipContentSection);
+
+                success = true;
+
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                success = false;
+                _logger.LogWarning(e, nameof(StreamSingle));
+                return BadRequest(e.ToString());
+            }
+            finally
+            {
+                stopwatch.Stop();
+                _logger.LogInformation($"Total time taken = {stopwatch.Elapsed.TotalMilliseconds} Result = {success}");
+            }
         }
 
         [HttpPost]
