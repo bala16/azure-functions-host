@@ -133,6 +133,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpPost]
         [Route("admin/instance/stream-zip-single")]
+        [DisableFormValueModelBinding]
         public async Task<IActionResult> StreamSingle([FromServices] SingleStreamerService streamerService)
         {
             _logger.LogInformation($"BBB Invoked {nameof(StreamSingle)}");
