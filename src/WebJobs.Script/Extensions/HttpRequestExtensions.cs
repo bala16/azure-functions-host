@@ -33,7 +33,8 @@ namespace Microsoft.Azure.WebJobs.Script.Extensions
 
         public static bool IsStreamUploadRequest(this HttpRequest request)
         {
-            return request.Path.StartsWithSegments("/admin/instance/stream-zip");
+            return request.Path.StartsWithSegments("/admin/instance/stream-zip") ||
+                   request.Path.StartsWithSegments("admin/instance/stream-zip-single");
         }
 
         public static TValue GetRequestPropertyOrDefault<TValue>(this HttpRequest request, string key)
