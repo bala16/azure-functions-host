@@ -407,10 +407,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         private Task<string> GetStreamDownloadTask()
         {
+            var stopWatch = Stopwatch.StartNew();
+
             _logger.LogInformation($"BBB Triggering stream download task");
             var streamedPath = _zipFileDownloadService.WaitForDownload(TimeSpan.FromSeconds(30));
             _logger.LogInformation($"BBB Streaming download task complete at path = {streamedPath}");
             _zipFileDownloadService.LogTimeTaken();
+
+            stopWatch.Stop();
+            _logger.LogInformation($"Total cold start download time (ms) = {stopWatch.Elapsed.TotalMilliseconds}");
+
             return Task.FromResult(streamedPath);
         }
 
