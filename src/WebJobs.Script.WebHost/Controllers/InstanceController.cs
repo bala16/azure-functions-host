@@ -149,12 +149,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
 
+                var metadataTimer = Stopwatch.StartNew();
+
                 var metadataSection = await reader.ReadNextSectionAsync();
                 await streamerService.HandleMetadata(metadataSection);
+
+                metadataTimer.Stop();
+                _logger.LogInformation($"BBB Time taken for metadata = {metadataTimer.Elapsed.TotalMilliseconds}");
+
+                var zipTimer = Stopwatch.StartNew();
 
                 var zipContentSection = await reader.ReadNextSectionAsync();
                 // await streamerService.HandleZipAllContent(zipContentSection);
                 await streamerService.HandleZipAllContentMemoryBased(zipContentSection);
+
+                zipTimer.Stop();
+                _logger.LogInformation($"BBB Time taken for zip = {zipTimer.Elapsed.TotalMilliseconds}");
 
                 success = true;
 
