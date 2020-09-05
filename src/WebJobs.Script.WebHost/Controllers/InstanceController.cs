@@ -153,7 +153,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 await streamerService.HandleMetadata(metadataSection);
 
                 var zipContentSection = await reader.ReadNextSectionAsync();
-                await streamerService.HandleZipAllContent(zipContentSection);
+                // await streamerService.HandleZipAllContent(zipContentSection);
+                await streamerService.HandleZipAllContentMemoryBased(zipContentSection);
 
                 success = true;
 
