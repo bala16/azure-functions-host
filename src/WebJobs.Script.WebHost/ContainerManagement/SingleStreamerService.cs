@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
@@ -94,6 +95,63 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             catch (Exception e)
             {
                 _logger.LogWarning(e, nameof(HandleZipAllContent));
+                _zipFileDownloadService.NotifyDownloadComplete(null);
+            }
+        }
+
+        private async Task WriteToFile(MemoryStream memoryStream)
+        {
+            try
+            {
+                var stopwatch = Stopwatch.StartNew();
+
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                using (memoryStream)
+                {
+                    using (var fs = new FileStream(GetZipDestinationPath(), FileMode.CreateNew,
+                        FileAccess.Write))
+                    {
+                        _logger.LogInformation($"BBB {DateTime.UtcNow} Writing to file stream from ms = {memoryStream.Length} fs.Length = {fs.Length}");
+                        await memoryStream.CopyToAsync(fs);
+                        fs.Flush(); // flush once at the end?
+
+                        if (AllBytesRead(fs.Length))
+                        {
+                            _logger.LogInformation("All bytes written. Signalling download complete");
+                            _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
+                        }
+                    }
+                }
+
+                stopwatch.Stop();
+                _logger.LogInformation($"Copy from ms to fs = {stopwatch.Elapsed.TotalMilliseconds}");
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(WriteToFile));
+                _zipFileDownloadService.NotifyDownloadComplete(null);
+            }
+        }
+
+        public async Task HandleZipAllContentMemoryBased(MultipartSection zipContentSection)
+        {
+            try
+            {
+                _logger.LogInformation($"{nameof(HandleZipAllContentMemoryBased)}");
+                if (zipContentSection == null)
+                {
+                    throw new ArgumentException(nameof(zipContentSection));
+                }
+
+                var memoryStream = new MemoryStream();
+                await zipContentSection.Body.CopyToAsync(memoryStream);
+                _logger.LogInformation($"Read into memory = {memoryStream.Length}");
+                var tIgnore = Task.Run(() => WriteToFile(memoryStream));
+                _logger.LogInformation($"Scheduled copy to FileStream");
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(HandleZipAllContentMemoryBased));
                 _zipFileDownloadService.NotifyDownloadComplete(null);
             }
         }
