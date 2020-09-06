@@ -99,12 +99,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             }
         }
 
-        private async Task WriteToFile(MemoryStream memoryStream)
+        private async Task WriteToFileUsingMemoryStream(MemoryStream memoryStream)
         {
             try
             {
                 var stopwatch = Stopwatch.StartNew();
-
                 memoryStream.Seek(0, SeekOrigin.Begin);
                 using (memoryStream)
                 {
@@ -128,9 +127,89 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             }
             catch (Exception e)
             {
-                _logger.LogWarning(e, nameof(WriteToFile));
+                _logger.LogWarning(e, nameof(WriteToFileUsingMemoryStream));
                 _zipFileDownloadService.NotifyDownloadComplete(null);
             }
+        }
+
+        public async Task HandleZipAllContentMemoryBasedOld(MultipartSection zipContentSection)
+        {
+            try
+            {
+                _logger.LogInformation($"{nameof(HandleZipAllContentMemoryBasedOld)}");
+                if (zipContentSection == null)
+                {
+                    throw new ArgumentException(nameof(zipContentSection));
+                }
+
+                var memoryStream = new MemoryStream();
+                await zipContentSection.Body.CopyToAsync(memoryStream);
+                _logger.LogInformation($"Read into memory = {memoryStream.Length}");
+                var tIgnore = Task.Run(() => WriteToFileUsingMemoryStream(memoryStream));
+                _logger.LogInformation($"Scheduled copy to FileStream");
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(HandleZipAllContentMemoryBasedOld));
+                _zipFileDownloadService.NotifyDownloadComplete(null);
+            }
+        }
+
+        private async Task WriteToFileUsingStream(Stream stream)
+        {
+            try
+            {
+                var stopwatch = Stopwatch.StartNew();
+                _logger.LogInformation($"BBB Writing to file stream from ms");
+
+                var buffer = new byte[8192];
+                bool isMoreToRead = true;
+                long totalBytesRead = 0;
+                int readCount = 0;
+
+                using (var fs = new FileStream(GetZipDestinationPath(), FileMode.CreateNew,
+                    FileAccess.Write))
+                {
+                    do
+                    {
+                        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (bytesRead == 0)
+                        {
+                            isMoreToRead = false;
+                            TriggerProgressChanged(_totalBytes, totalBytesRead);
+                            continue;
+                        }
+
+                        await fs.WriteAsync(buffer, 0, bytesRead);
+
+                        totalBytesRead += bytesRead;
+                        readCount += 1;
+
+                        if (readCount % 100 == 0)
+                        {
+                            TriggerProgressChanged(_totalBytes, totalBytesRead);
+                        }
+                    }
+                    while (isMoreToRead);
+
+                    _logger.LogInformation("All bytes written. Signalling download complete");
+                    _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
+                }
+
+                stopwatch.Stop();
+                _logger.LogInformation($"Copy from ms to fs = {stopwatch.Elapsed.TotalMilliseconds}");
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, nameof(WriteToFileUsingStream));
+                _zipFileDownloadService.NotifyDownloadComplete(null);
+            }
+        }
+
+        private void TriggerProgressChanged(long totalDownloadSize, long totalBytesRead)
+        {
+            double progressPercentage = Math.Round((double)totalBytesRead / totalDownloadSize * 100, 2);
+            _logger.LogInformation($"[Progress] TotalSize = {totalDownloadSize} ReadSoFar = {totalBytesRead} % = {progressPercentage}");
         }
 
         public async Task HandleZipAllContentMemoryBased(MultipartSection zipContentSection)
@@ -143,10 +222,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                     throw new ArgumentException(nameof(zipContentSection));
                 }
 
-                var memoryStream = new MemoryStream();
-                await zipContentSection.Body.CopyToAsync(memoryStream);
-                _logger.LogInformation($"Read into memory = {memoryStream.Length}");
-                var tIgnore = Task.Run(() => WriteToFile(memoryStream));
+                // var tIgnore = Task.Run(() => WriteToFileUsingStream(zipContentSection.Body));
+                await WriteToFileUsingStream(zipContentSection.Body);
                 _logger.LogInformation($"Scheduled copy to FileStream");
             }
             catch (Exception e)
