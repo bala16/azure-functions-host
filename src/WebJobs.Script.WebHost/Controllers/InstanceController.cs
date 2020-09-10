@@ -1,14 +1,22 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
+using Microsoft.Azure.WebJobs.Script.WebHost.Filters;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -89,7 +97,56 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult GetHttpHealthStatus()
         {
             // Reaching here implies that http health of the container is ok.
-            return Ok();
+            return Ok("http-health");
+        }
+
+        [HttpPost]
+        [Route("admin/instance/addfolder")]
+        [DisableFormValueModelBinding]
+        public async Task<IActionResult> AddFolder([FromServices] FunctionsFolderService folderService)
+        {
+            try
+            {
+                _logger.LogInformation($"Start {nameof(AddFolder)}");
+
+                var boundary = GetBoundary(
+                    MediaTypeHeaderValue.Parse(Request.ContentType),
+                    new FormOptions().MultipartBoundaryLengthLimit);
+
+                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
+
+                var metadataSection = await reader.ReadNextSectionAsync();
+                var hydrateFolderRequest = await folderService.GetMetadata(metadataSection);
+
+                _logger.LogInformation($"Adding folder {JsonConvert.SerializeObject(hydrateFolderRequest)}");
+
+                var zipContentSection = await reader.ReadNextSectionAsync();
+                await folderService.HandleZip(zipContentSection, hydrateFolderRequest);
+
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return Conflict(e.ToString());
+            }
+        }
+
+        private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
+        {
+            var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary).Value;
+
+            if (string.IsNullOrWhiteSpace(boundary))
+            {
+                throw new InvalidDataException("Missing content-type boundary.");
+            }
+
+            if (boundary.Length > lengthLimit)
+            {
+                throw new InvalidDataException(
+                    $"Multipart boundary length limit {lengthLimit} exceeded.");
+            }
+
+            return boundary;
         }
     }
 }

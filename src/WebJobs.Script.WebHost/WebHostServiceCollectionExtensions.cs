@@ -85,6 +85,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             // Linux container services
             services.AddLinuxContainerServices();
+            services.AddSingleton<FunctionsFolderNotificationService>();
+            services.AddSingleton<FunctionsFolderService>();
 
             // ScriptSettingsManager should be replaced. We're setting this here as a temporary step until
             // broader configuaration changes are made:

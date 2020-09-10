@@ -31,6 +31,11 @@ namespace Microsoft.Azure.WebJobs.Script.Extensions
             return request.Path.StartsWithSegments("/admin/functions/download");
         }
 
+        public static bool IsFolderRequest(this HttpRequest request)
+        {
+            return request.Path.StartsWithSegments("/admin/instance/addfolder");
+        }
+
         public static TValue GetRequestPropertyOrDefault<TValue>(this HttpRequest request, string key)
         {
             if (request.HttpContext != null &&
