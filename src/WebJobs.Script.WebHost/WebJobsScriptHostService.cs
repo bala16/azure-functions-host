@@ -224,15 +224,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     State = ScriptHostState.Default;
                 }
 
-                bool isOffline = Utility.CheckAppOffline(_environment, _applicationHostOptions.CurrentValue.ScriptPath);
-                State = isOffline ? ScriptHostState.Offline : State;
-                bool hasNonTransientErrors = startupMode.HasFlag(JobHostStartupMode.HandlingNonTransientError);
-                bool handlingError = startupMode.HasFlag(JobHostStartupMode.HandlingError);
+                bool isOffline;
+                bool handlingError;
+                bool skipJobHostStartup;
+                bool skipHostJsonConfiguration;
+                using (_metricsLogger.LatencyEvent(MetricEventNames.AppOffline))
+                {
+                    isOffline = Utility.CheckAppOffline(_environment, _applicationHostOptions.CurrentValue.ScriptPath);
+                    State = isOffline ? ScriptHostState.Offline : State;
+                    bool hasNonTransientErrors = startupMode.HasFlag(JobHostStartupMode.HandlingNonTransientError);
+                    handlingError = startupMode.HasFlag(JobHostStartupMode.HandlingError);
 
-                // If we're in a non-transient error state or offline, skip host initialization
-                bool skipJobHostStartup = isOffline || hasNonTransientErrors;
-                bool skipHostJsonConfiguration = startupMode == JobHostStartupMode.HandlingConfigurationParsingError;
-                _logger.Building(skipJobHostStartup, skipHostJsonConfiguration, activeOperation.Id);
+                    // If we're in a non-transient error state or offline, skip host initialization
+                    skipJobHostStartup = isOffline || hasNonTransientErrors;
+                    skipHostJsonConfiguration = startupMode == JobHostStartupMode.HandlingConfigurationParsingError;
+                    _logger.Building(skipJobHostStartup, skipHostJsonConfiguration, activeOperation.Id);
+                }
 
                 using (_metricsLogger.LatencyEvent(MetricEventNames.ScriptHostManagerBuildScriptHost))
                 {
@@ -459,12 +466,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     var previousHost = ActiveHost;
                     ActiveHost = null;
 
-                    using (var activeOperation = ScriptHostStartupOperation.Create(cancellationToken, _logger))
+                    using (_metricsLogger.LatencyEvent(MetricEventNames.CreateScriptHostStartupOperation))
                     {
-                        Task startTask = UnsynchronizedStartHostAsync(activeOperation);
-                        Task stopTask = Orphan(previousHost, cancellationToken);
+                        using (var activeOperation = ScriptHostStartupOperation.Create(cancellationToken, _logger))
+                        {
+                            Task startTask = UnsynchronizedStartHostAsync(activeOperation);
+                            Task stopTask = Orphan(previousHost, cancellationToken);
 
-                        await startTask;
+                            await startTask;
+                        }
                     }
 
                     _logger.Restarted();

@@ -22,6 +22,8 @@ namespace Microsoft.Azure.WebJobs.Script.Diagnostics
         public const string ScriptHostManagerStartScriptHost = "scripthostmanager.startscripthost.latency";
         public const string ScriptHostManagerStartService = "scripthostmanager.start.latency";
         public const string ScriptHostManagerRestartService = "scripthostmanager.restart.latency";
+        public const string CreateScriptHostStartupOperation = "cold.create.scriptHostStartupOperation";
+        public const string AppOffline = "cold.check.appoffline";
 
         // language worker level events
         public const string WorkerInitializeLatency = "host.startup.outofproc.{0}worker.initialize.attempt{1}.latency";
