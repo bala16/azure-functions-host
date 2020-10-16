@@ -267,7 +267,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         public async Task<SyncTriggersPayload> GetSyncTriggersPayload()
         {
             var hostOptions = _applicationHostOptions.CurrentValue.ToHostOptions();
-            var functionsMetadata = _functionMetadataManager.GetFunctionMetadata().Where(m => !m.IsProxy());
+            var functionsMetadata = _functionMetadataManager.GetFunctionMetadata(sortFunctionsMetadata: true).Where(m => !m.IsProxy());
 
             // trigger information used by the ScaleController
             var triggers = await GetFunctionTriggers(functionsMetadata, hostOptions);
@@ -291,7 +291,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             // Add all listable functions details to the payload
             JObject functions = new JObject();
             string routePrefix = await WebFunctionsManager.GetRoutePrefix(hostOptions.RootScriptPath);
-            var listableFunctions = _functionMetadataManager.GetFunctionMetadata().Where(m => !m.IsCodeless());
+            var listableFunctions = _functionMetadataManager.GetFunctionMetadata(sortFunctionsMetadata: true).Where(m => !m.IsCodeless());
             var functionDetails = await WebFunctionsManager.GetFunctionMetadataResponse(listableFunctions, hostOptions, _hostNameProvider);
             result.Add("functions", new JArray(functionDetails.Select(p => JObject.FromObject(p))));
 
