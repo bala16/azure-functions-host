@@ -25,6 +25,8 @@ namespace Microsoft.Diagnostics.JitTrace
             {
                 log(failure);
             }
+
+            Console.WriteLine($"Failed jit = {failure}");
         }
 
         /// <summary>
@@ -114,6 +116,7 @@ namespace Microsoft.Diagnostics.JitTrace
                     if (owningType == null)
                     {
                         failedPrepares++;
+                        LogOnFailure("Owning type = null");
                         LogOnFailure(methodString);
                         continue;
                     }
@@ -139,6 +142,7 @@ namespace Microsoft.Diagnostics.JitTrace
                     if (abortMethodDiscovery)
                     {
                         failedPrepares++;
+                        LogOnFailure("abortMethodDiscovery");
                         LogOnFailure(methodString);
                         continue;
                     }
@@ -156,6 +160,7 @@ namespace Microsoft.Diagnostics.JitTrace
                         {
                             // Ctors with generic args don't make sense
                             failedPrepares++;
+                            LogOnFailure(".ctor genericMethodArgCount != 0");
                             LogOnFailure(methodString);
                             continue;
                         }
@@ -191,6 +196,7 @@ namespace Microsoft.Diagnostics.JitTrace
                         {
                             // This type no longer has a type initializer
                             failedPrepares++;
+                            LogOnFailure(".cctor");
                             LogOnFailure(methodString);
                             continue;
                         }
@@ -250,21 +256,24 @@ namespace Microsoft.Diagnostics.JitTrace
                             System.Runtime.CompilerServices.RuntimeHelpers.PrepareMethod(memberHandle);
                             successfulPrepares++;
                         }
-                        catch
+                        catch (Exception e)
                         {
                             failedPrepares++;
+                            LogOnFailure($"exception = {e.ToString()}");
                             LogOnFailure(methodString);
                         }
                     }
                     if (!foundAtLeastOneEntry)
                     {
                         failedPrepares++;
+                        LogOnFailure($"foundAtLeastOneEntry");
                         LogOnFailure(methodString);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     failedPrepares++;
+                    LogOnFailure($"Exception2 = {ex.ToString()}");
                     LogOnFailure(methodString);
                 }
             }
