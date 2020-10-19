@@ -121,15 +121,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
 
         public void ApplyAppSettings(IEnvironment environment, ILogger logger)
         {
+            int count = 0;
             foreach (var pair in Environment)
             {
                 environment.SetEnvironmentVariable(pair.Key, pair.Value);
 
                 if (pair.Key.Equals("WEBSITE_FUNCTIONS_AZUREMONITOR_CATEGORIES", StringComparison.Ordinal))
                 {
+                    count++;
                     logger.LogInformation($">>.> {pair.Key} = {pair.Value} Len = {pair.Value?.Length}");
                 }
             }
+
+            logger.LogInformation($">>.> Count = {count}");
+
+
             if (CorsSettings != null)
             {
                 environment.SetEnvironmentVariable(EnvironmentSettingNames.CorsSupportCredentials, CorsSettings.SupportCredentials.ToString());
