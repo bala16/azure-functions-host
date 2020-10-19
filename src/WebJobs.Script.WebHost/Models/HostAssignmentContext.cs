@@ -135,7 +135,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
 
             logger.LogInformation($">>.> Count = {count}");
 
-
             if (CorsSettings != null)
             {
                 environment.SetEnvironmentVariable(EnvironmentSettingNames.CorsSupportCredentials, CorsSettings.SupportCredentials.ToString());
