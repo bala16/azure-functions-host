@@ -124,6 +124,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
             foreach (var pair in Environment)
             {
                 environment.SetEnvironmentVariable(pair.Key, pair.Value);
+
+                if (pair.Key.Equals("WEBSITE_FUNCTIONS_AZUREMONITOR_CATEGORIES", StringComparison.Ordinal))
+                {
+                    logger.LogInformation($">>.> {pair.Key} = {pair.Value} Len = {pair.Value?.Length}");
+                }
             }
             if (CorsSettings != null)
             {
