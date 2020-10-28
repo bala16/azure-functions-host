@@ -91,5 +91,65 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             // Reaching here implies that http health of the container is ok.
             return Ok();
         }
+
+        [HttpGet]
+        [Route("admin/instance/cifs")]
+        public async Task<string> Cifs([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path)
+        {
+            var httpResponseMessage = await meshServiceClient.MountCifs(string.Empty, string.Empty, $"/{path}");
+            var result = await httpResponseMessage.Content.ReadAsStringAsync();
+            _logger.LogInformation(nameof(Cifs), $"Path = /{path} result = {result}");
+            return result;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/cifs2")]
+        public async Task<string> Cifs2([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path, [FromQuery] string path2)
+        {
+            var httpResponseMessage = await meshServiceClient.MountCifs(string.Empty, string.Empty, $"/{path}/{path2}");
+            var result = await httpResponseMessage.Content.ReadAsStringAsync();
+            _logger.LogInformation(nameof(Cifs2), $"Path = /{path}/{path2} result = {result}");
+            return result;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/fuse-squashfs")]
+        public async Task<string> FuseSquashFs([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path)
+        {
+            var httpResponseMessage = await meshServiceClient.MountFuse("squashfs", string.Empty, $"/{path}");
+            var result = await httpResponseMessage.Content.ReadAsStringAsync();
+            _logger.LogInformation(nameof(FuseSquashFs), $"Path = /{path} result = {result}");
+            return result;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/fuse-squashfs2")]
+        public async Task<string> FuseSquashFs2([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path, [FromQuery] string path2)
+        {
+            var httpResponseMessage = await meshServiceClient.MountFuse("squashfs", string.Empty, $"/{path}/{path2}");
+            var result = await httpResponseMessage.Content.ReadAsStringAsync();
+            _logger.LogInformation(nameof(FuseSquashFs2), $"Path = /{path}/{path2} result = {result}");
+            return result;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/fuse-zip")]
+        public async Task<string> FuseZip([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path)
+        {
+            var httpResponseMessage = await meshServiceClient.MountFuse("zip", string.Empty, $"/{path}");
+            var result = await httpResponseMessage.Content.ReadAsStringAsync();
+            _logger.LogInformation(nameof(FuseZip), $"Path = /{path} result = {result}");
+            return result;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/fuse-zip2")]
+        public async Task<string> FuseZip2([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path, [FromQuery] string path2)
+        {
+            var httpResponseMessage = await meshServiceClient.MountFuse("zip", string.Empty, $"/{path}/{path2}");
+            var result = await httpResponseMessage.Content.ReadAsStringAsync();
+            _logger.LogInformation(nameof(FuseZip2), $"Path = /{path}/{path2} result = {result}");
+            return result;
+        }
     }
 }

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 
@@ -18,9 +19,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         public static NullMeshServiceClient Instance => _instance.Value;
 
-        public Task MountCifs(string connectionString, string contentShare, string targetPath)
+        public Task<HttpResponseMessage> MountCifs(string connectionString, string contentShare, string targetPath)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(new HttpResponseMessage());
         }
 
         public Task MountBlob(string connectionString, string contentShare, string targetPath)
@@ -28,9 +29,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return Task.CompletedTask;
         }
 
-        public Task MountFuse(string type, string filePath, string scriptPath)
+        public Task<HttpResponseMessage> MountFuse(string type, string filePath, string scriptPath)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(new HttpResponseMessage());
         }
 
         public Task PublishContainerFunctionExecutionActivity(ContainerFunctionExecutionActivity activity)

@@ -27,11 +27,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
         }
 
-        public async Task MountCifs(string connectionString, string contentShare, string targetPath)
+        public async Task<HttpResponseMessage> MountCifs(string connectionString, string contentShare, string targetPath)
         {
             var sa = CloudStorageAccount.Parse(connectionString);
             var key = Convert.ToBase64String(sa.Credentials.ExportKey());
-            await SendAsync(new[]
+            return await SendAsync(new[]
             {
                 new KeyValuePair<string, string>(Operation, "cifs"),
                 new KeyValuePair<string, string>("host", sa.FileEndpoint.Host),
@@ -48,13 +48,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             throw new NotImplementedException(nameof(MountBlob));
         }
 
-        public async Task MountFuse(string type, string filePath, string scriptPath)
-            => await SendAsync(new[]
+        public async Task<HttpResponseMessage> MountFuse(string type, string filePath, string scriptPath)
+        {
+            return await SendAsync(new[]
             {
                 new KeyValuePair<string, string>(Operation, type),
                 new KeyValuePair<string, string>("filePath", filePath),
                 new KeyValuePair<string, string>("targetPath", scriptPath),
             });
+        }
 
         public async Task PublishContainerActivity(IEnumerable<ContainerFunctionExecutionActivity> activities)
         {
