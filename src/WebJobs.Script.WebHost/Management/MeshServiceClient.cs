@@ -76,7 +76,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private async Task PublishActivities(IEnumerable<ContainerFunctionExecutionActivity> activities)
         {
             // Log one of the activities being published for debugging.
-            _logger.LogDebug($"Publishing function execution activity {activities.Take(1)}");
+            _logger.LogDebug($"Publishing function execution activity {activities.FirstOrDefault()}");
 
             var operation = new[]
             {
@@ -95,6 +95,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var res = await _client.PostAsync(_environment.GetEnvironmentVariable(EnvironmentSettingNames.MeshInitURI),
                 new FormUrlEncodedContent(formData));
             _logger.LogDebug($"Mesh response {res.StatusCode}");
+
+            if (!res.IsSuccessStatusCode)
+            {
+                _logger.LogError(new Exception(await res.Content.ReadAsStringAsync()), $"{nameof(SendAsync)}");
+            }
+
             return res;
         }
     }
