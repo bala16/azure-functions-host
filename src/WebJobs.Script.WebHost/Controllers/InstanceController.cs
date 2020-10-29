@@ -96,7 +96,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/instance/cifs")]
         public async Task<string> Cifs([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path)
         {
-            var httpResponseMessage = await meshServiceClient.MountCifs(string.Empty, string.Empty, $"/{path}");
+            var environmentVariable = _environment.GetEnvironmentVariable("AzureWebJobsStorage");
+            var httpResponseMessage = await meshServiceClient.MountCifs(environmentVariable, string.Empty, $"/{path}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
             _logger.LogInformation(nameof(Cifs), $"Path = /{path} result = {result}");
             return result;
@@ -106,7 +107,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [Route("admin/instance/cifs2")]
         public async Task<string> Cifs2([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] string path, [FromQuery] string path2)
         {
-            var httpResponseMessage = await meshServiceClient.MountCifs(string.Empty, string.Empty, $"/{path}/{path2}");
+            var environmentVariable = _environment.GetEnvironmentVariable("AzureWebJobsStorage");
+            var httpResponseMessage = await meshServiceClient.MountCifs(environmentVariable, string.Empty, $"/{path}/{path2}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
             _logger.LogInformation(nameof(Cifs2), $"Path = /{path}/{path2} result = {result}");
             return result;
