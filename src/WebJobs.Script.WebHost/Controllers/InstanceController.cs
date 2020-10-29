@@ -99,7 +99,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             var environmentVariable = _environment.GetEnvironmentVariable("AzureWebJobsStorage");
             var httpResponseMessage = await meshServiceClient.MountCifs(environmentVariable, string.Empty, $"/{path}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
-            _logger.LogInformation(nameof(Cifs), $"Path = /{path} result = {result}");
+            _logger.LogInformation($"{nameof(Cifs)} Path = /{path} result = {result}");
             return result;
         }
 
@@ -110,7 +110,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             var environmentVariable = _environment.GetEnvironmentVariable("AzureWebJobsStorage");
             var httpResponseMessage = await meshServiceClient.MountCifs(environmentVariable, string.Empty, $"/{path}/{path2}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
-            _logger.LogInformation(nameof(Cifs2), $"Path = /{path}/{path2} result = {result}");
+            _logger.LogInformation($"{nameof(Cifs2)} Path = /{path}/{path2} result = {result}");
             return result;
         }
 
@@ -120,7 +120,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             var httpResponseMessage = await meshServiceClient.MountFuse("squashfs", string.Empty, $"/{path}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
-            _logger.LogInformation(nameof(FuseSquashFs), $"Path = /{path} result = {result}");
+            _logger.LogInformation($"{nameof(FuseSquashFs)} Path = /{path} result = {result}");
+
             return result;
         }
 
@@ -130,7 +131,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             var httpResponseMessage = await meshServiceClient.MountFuse("squashfs", string.Empty, $"/{path}/{path2}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
-            _logger.LogInformation(nameof(FuseSquashFs2), $"Path = /{path}/{path2} result = {result}");
+            _logger.LogInformation($"{nameof(FuseSquashFs2)} Path = /{path}/{path2} result = {result}");
+
             return result;
         }
 
@@ -140,7 +142,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             var httpResponseMessage = await meshServiceClient.MountFuse("zip", string.Empty, $"/{path}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
-            _logger.LogInformation(nameof(FuseZip), $"Path = /{path} result = {result}");
+            _logger.LogInformation($"{nameof(FuseZip)} Path = /{path} result = {result}");
+
             return result;
         }
 
@@ -150,7 +153,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             var httpResponseMessage = await meshServiceClient.MountFuse("zip", string.Empty, $"/{path}/{path2}");
             var result = await httpResponseMessage.Content.ReadAsStringAsync();
-            _logger.LogInformation(nameof(FuseZip2), $"Path = /{path}/{path2} result = {result}");
+            _logger.LogInformation($"{nameof(FuseZip2)} Path = /{path}/{path2} result = {result}");
             return result;
         }
     }
