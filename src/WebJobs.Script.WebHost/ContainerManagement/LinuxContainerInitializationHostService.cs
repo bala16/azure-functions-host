@@ -53,6 +53,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                 var encryptedAssignmentContext = JsonConvert.DeserializeObject<EncryptedHostAssignmentContext>(startContext);
                 var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext);
 
+                var error = await _instanceManager.SpecializeMSISidecar(assignmentContext);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    _logger.LogWarning($"Re-specializing MSI sidecar failed with {error}");
+                }
+                else
+                {
+                    _logger.LogInformation("MSI sidecar re-specialized successfully");
+                }
+
                 bool success = _instanceManager.StartAssignment(assignmentContext);
                 _logger.LogInformation($"StartAssignment invoked (Success={success})");
             }

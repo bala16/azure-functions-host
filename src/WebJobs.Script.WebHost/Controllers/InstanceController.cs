@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -90,6 +92,29 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/crash1")]
+        public string Crash1()
+        {
+            Task.Run(() => throw new Exception("1"));
+            return "1";
+        }
+
+        [HttpGet]
+        [Route("admin/instance/crash2")]
+        public string Crash2()
+        {
+            throw new Exception("2");
+        }
+
+        [HttpGet]
+        [Route("admin/instance/crash3")]
+        public string Crash3()
+        {
+            Process.GetCurrentProcess().Kill();
+            return "3";
         }
     }
 }
