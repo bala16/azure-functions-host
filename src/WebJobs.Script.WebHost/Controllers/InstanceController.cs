@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -115,6 +116,31 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             Process.GetCurrentProcess().Kill();
             return "3";
+        }
+
+        [HttpGet]
+        [Route("admin/instance/crashmsi")]
+        public async Task<string> CrashMSI()
+        {
+            string msiEndpoint = "http://localhost:8081/msi/token";
+            var uri = new Uri(msiEndpoint);
+            string stem = "/api/crash?api-version=1";
+            var address = $"http://{uri.Host}:{uri.Port}{stem}";
+
+            HttpResponseMessage response;
+            using (var httpClient = new HttpClient())
+            {
+                response = await httpClient.GetAsync(address);
+            }
+
+            string result = "Crashed msi ";
+
+            if (response != null)
+            {
+                result += response.StatusCode;
+            }
+
+            return result + address;
         }
     }
 }
