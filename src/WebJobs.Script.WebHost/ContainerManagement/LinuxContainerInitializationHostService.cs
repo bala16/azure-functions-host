@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Blob;
@@ -52,6 +53,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 
                 var encryptedAssignmentContext = JsonConvert.DeserializeObject<EncryptedHostAssignmentContext>(startContext);
                 var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext);
+
+                _logger.LogInformation($">>>: Key1: {assignmentContext.Environment.Keys.FirstOrDefault()}");
+                _logger.LogInformation($">>>: SiteName: {assignmentContext.SiteName}");
+                _logger.LogInformation($">>>: SiteId: {assignmentContext.SiteId}");
 
                 bool success = _instanceManager.StartAssignment(assignmentContext);
                 _logger.LogInformation($"StartAssignment invoked (Success={success})");

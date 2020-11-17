@@ -145,6 +145,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             // Don't update StartupContext for warmup requests
             if (!hostAssignmentContext.IsWarmupRequest)
             {
+                _logger.LogInformation($">>>> setting secret {hostAssignmentContext.Secrets}");
                 // apply values from the context to our cached context
                 Context = new StartupContext
                 {
