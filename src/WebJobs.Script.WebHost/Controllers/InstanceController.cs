@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         }
 
         [HttpGet]
-        [Route("admin/instance/http-health")]
+        [Route("admin/instance/crash")]
         public string Crash()
         {
             Process.GetCurrentProcess().Kill();
