@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -51,6 +53,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
             // Wait for Sidecar specialization to complete before returning ok.
             // This shouldn't take too long so ok to do this sequentially.
+
+            if (assignmentContext.MSIContext != null)
+            {
+                _logger.LogInformation($"<>>> MSI sitename = {assignmentContext.MSIContext.SiteName} Count:= {assignmentContext.MSIContext.Identities.Count()}");
+            }
+            else
+            {
+                _logger.LogInformation($"Unexpected missing of msi context");
+            }
+
             error = await _instanceManager.SpecializeMSISidecar(assignmentContext);
             if (error != null)
             {
@@ -90,6 +102,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/crash")]
+        public string Crash()
+        {
+            Process.GetCurrentProcess().Kill();
+            return "dd";
         }
     }
 }
