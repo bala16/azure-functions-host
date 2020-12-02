@@ -212,7 +212,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             _logger.LogInformation($"[Progress] TotalSize = {totalDownloadSize} ReadSoFar = {totalBytesRead} % = {progressPercentage}");
         }
 
-        public async Task HandleZipAllContentMemoryBased(MultipartSection zipContentSection)
+        public Task HandleZipAllContentMemoryBased(MultipartSection zipContentSection)
         {
             try
             {
@@ -222,14 +222,19 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                     throw new ArgumentException(nameof(zipContentSection));
                 }
 
-                // var tIgnore = Task.Run(() => WriteToFileUsingStream(zipContentSection.Body));
-                await WriteToFileUsingStream(zipContentSection.Body);
+                var totalBytes = zipContentSection.Body.Length;
+                _logger.LogInformation($"BBB Total bytes in memory stream = {totalBytes}");
+
+                var tIgnore = Task.Run(() => WriteToFileUsingStream(zipContentSection.Body));
+                // await WriteToFileUsingStream(zipContentSection.Body);
                 _logger.LogInformation($"Scheduled copy to FileStream");
+                return Task.CompletedTask;
             }
             catch (Exception e)
             {
                 _logger.LogWarning(e, nameof(HandleZipAllContentMemoryBased));
                 _zipFileDownloadService.NotifyDownloadComplete(null);
+                return Task.CompletedTask;
             }
         }
 
