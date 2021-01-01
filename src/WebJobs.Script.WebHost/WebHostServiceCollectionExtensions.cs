@@ -126,6 +126,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             // Secret management
             services.TryAddSingleton<ISecretManagerProvider, DefaultSecretManagerProvider>();
+            services.AddSingleton<ZipFileDownloadService>();
+            services.AddSingleton<SingleStreamerService>();
 
             // Grpc
             services.AddGrpc();

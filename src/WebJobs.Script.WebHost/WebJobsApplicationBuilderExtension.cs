@@ -31,7 +31,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             builder.UseMiddleware<HostnameFixupMiddleware>();
             if (environment.IsLinuxConsumption())
             {
-                builder.UseMiddleware<EnvironmentReadyCheckMiddleware>();
+                builder.UseWhen(context => !context.Request.IsStreamUploadRequest(), b =>
+                {
+                    b.UseMiddleware<EnvironmentReadyCheckMiddleware>();
+                });
             }
 
             if (standbyOptions.CurrentValue.InStandbyMode)

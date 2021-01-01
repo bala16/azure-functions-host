@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
             }
         }
 
-        public static string Decrypt(byte[] encryptionKey, string value)
+        private static byte[] DecryptBytes(byte[] encryptionKey, string value)
         {
             var parts = value.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 2 && parts.Length != 3)
@@ -79,9 +79,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Security
                         binaryWriter.Write(data, 0, data.Length);
                     }
 
-                    return Encoding.UTF8.GetString(ms.ToArray());
+                    return ms.ToArray();
                 }
             }
+        }
+
+        public static string Decrypt(byte[] encryptionKey, string value)
+        {
+            return Encoding.UTF8.GetString(DecryptBytes(encryptionKey, value));
         }
 
         public static string Decrypt(string value, IEnvironment environment = null)

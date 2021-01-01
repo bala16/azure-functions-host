@@ -1,14 +1,22 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
+using Microsoft.Azure.WebJobs.Script.WebHost.Filters;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 {
@@ -90,6 +98,121 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpPost]
+        [Route("admin/instance/stream-zip")]
+        [DisableFormValueModelBinding]
+        public async Task<IActionResult> Stream([FromServices] SingleStreamerService singleStreamerService, [FromQuery] bool chunked = false)
+        {
+            _logger.LogInformation($"{nameof(Stream)} Start");
+
+            var stopwatch = Stopwatch.StartNew();
+            var success = true;
+
+            try
+            {
+                var zipTimer = Stopwatch.StartNew();
+
+                if (chunked)
+                {
+                    await singleStreamerService.WriteStreamToFileChunked(Request.Body);
+                }
+                else
+                {
+                    await singleStreamerService.WriteStreamToFileDirectly(Request.Body);
+                }
+
+                zipTimer.Stop();
+                _logger.LogInformation($"{nameof(Stream)} Time taken for zip = {zipTimer.Elapsed.TotalMilliseconds}");
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                success = false;
+                _logger.LogWarning(e, nameof(Stream));
+                return BadRequest(e.ToString());
+            }
+            finally
+            {
+                stopwatch.Stop();
+                _logger.LogInformation($"{nameof(Stream)} Total time taken = {stopwatch.Elapsed.TotalMilliseconds} Result = {success}");
+            }
+        }
+
+        [HttpPost]
+        [Route("admin/instance/stream-zip-metadata")]
+        [DisableFormValueModelBinding]
+        public async Task<IActionResult> StreamSingle([FromServices] SingleStreamerService singleStreamerService, [FromQuery] bool chunked = false)
+        {
+            _logger.LogInformation($"{nameof(StreamSingle)} Start Chunked = {chunked}");
+
+            var stopwatch = Stopwatch.StartNew();
+            var success = true;
+
+            try
+            {
+                var boundary = GetBoundary(
+                    MediaTypeHeaderValue.Parse(Request.ContentType),
+                    new FormOptions().MultipartBoundaryLengthLimit);
+
+                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
+
+                var metadataTimer = Stopwatch.StartNew();
+
+                var metadataSection = await reader.ReadNextSectionAsync();
+                await singleStreamerService.HandleMetadata(metadataSection);
+
+                metadataTimer.Stop();
+                _logger.LogInformation($"{nameof(StreamSingle)} Time taken for metadata = {metadataTimer.Elapsed.TotalMilliseconds}");
+
+                var zipTimer = Stopwatch.StartNew();
+
+                var zipContentSection = await reader.ReadNextSectionAsync();
+
+                if (chunked)
+                {
+                    await singleStreamerService.WriteZipContentToFileInChunks(zipContentSection);
+                }
+                else
+                {
+                    await singleStreamerService.WriteZipContentToFileDirectly(zipContentSection);
+                }
+
+                zipTimer.Stop();
+                _logger.LogInformation($"{nameof(StreamSingle)} Time taken for zip = {zipTimer.Elapsed.TotalMilliseconds}");
+
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                success = false;
+                _logger.LogWarning(e, nameof(StreamSingle));
+                return BadRequest(e.ToString());
+            }
+            finally
+            {
+                stopwatch.Stop();
+                _logger.LogInformation($"{nameof(StreamSingle)} Total time taken = {stopwatch.Elapsed.TotalMilliseconds} Result = {success}");
+            }
+        }
+
+        private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
+        {
+            var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary).Value;
+
+            if (string.IsNullOrWhiteSpace(boundary))
+            {
+                throw new InvalidDataException("Missing content-type boundary.");
+            }
+
+            if (boundary.Length > lengthLimit)
+            {
+                throw new InvalidDataException(
+                    $"Multipart boundary length limit {lengthLimit} exceeded.");
+            }
+
+            return boundary;
         }
     }
 }

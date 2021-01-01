@@ -14,6 +14,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.File;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
+using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -29,19 +30,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         private readonly ILogger _logger;
         private readonly IMetricsLogger _metricsLogger;
         private readonly IMeshServiceClient _meshServiceClient;
+        private readonly ZipFileDownloadService _zipFileDownloadService;
         private readonly IEnvironment _environment;
         private readonly IOptionsFactory<ScriptApplicationHostOptions> _optionsFactory;
         private readonly HttpClient _client;
         private readonly IScriptWebHostEnvironment _webHostEnvironment;
 
         public InstanceManager(IOptionsFactory<ScriptApplicationHostOptions> optionsFactory, HttpClient client, IScriptWebHostEnvironment webHostEnvironment,
-            IEnvironment environment, ILogger<InstanceManager> logger, IMetricsLogger metricsLogger, IMeshServiceClient meshServiceClient)
+            IEnvironment environment, ILogger<InstanceManager> logger, IMetricsLogger metricsLogger, IMeshServiceClient meshServiceClient, ZipFileDownloadService zipFileDownloadService)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _metricsLogger = metricsLogger;
             _meshServiceClient = meshServiceClient;
+            _zipFileDownloadService = zipFileDownloadService;
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
             _optionsFactory = optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory));
         }
@@ -159,12 +162,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             {
                 // In AppService, ZipUrl == 1 means the package is hosted in azure files.
                 // Otherwise we expect zipUrl to be a blobUri to a zip or a squashfs image
-                (var error, var contentLength) = await ValidateBlobPackageContext(pkgContext);
-                if (string.IsNullOrEmpty(error))
-                {
-                    assignmentContext.PackageContentLength = contentLength;
-                }
-                return error;
+
+                _logger.LogInformation("Skipping URL HEAD validation");
+                assignmentContext.PackageContentLength = null;
+                return null;
             }
             else if (!string.IsNullOrEmpty(assignmentContext.AzureFilesConnectionString))
             {
@@ -358,10 +359,40 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
         }
 
+        private async Task<string> GetFilePath(RunFromPackageContext pkgContext, bool streamTask)
+        {
+            _logger.LogInformation($"Using stream task = {streamTask}");
+            return streamTask ? await GetStreamDownloadTask() : await GetDownloadTask(pkgContext);
+        }
+
+        private Task<string> GetStreamDownloadTask()
+        {
+            var stopWatch = Stopwatch.StartNew();
+
+            _logger.LogInformation($"{nameof(GetStreamDownloadTask)} Triggering stream download task");
+            var streamedPath = _zipFileDownloadService.WaitForDownload(TimeSpan.FromSeconds(30));
+            _logger.LogInformation($"{nameof(GetStreamDownloadTask)} Streaming download task complete at path = {streamedPath}");
+            _zipFileDownloadService.LogTimeTaken();
+
+            stopWatch.Stop();
+            _logger.LogInformation($"{nameof(GetStreamDownloadTask)} Total cold start download time (ms) = {stopWatch.Elapsed.TotalMilliseconds}");
+
+            return Task.FromResult(streamedPath);
+        }
+
+        private async Task<string> GetDownloadTask(RunFromPackageContext pkgContext)
+        {
+            _logger.LogInformation($"{nameof(GetDownloadTask)} Triggering regular download task");
+            var filePath = await Download(pkgContext);
+            _logger.LogInformation($"{nameof(GetDownloadTask)} Regular download task complete at path = {filePath}");
+            return filePath;
+        }
+
         private async Task ApplyBlobPackageContext(RunFromPackageContext pkgContext, string targetPath)
         {
             // download zip and extract
-            var filePath = await Download(pkgContext);
+
+            var filePath = await GetFilePath(pkgContext, true);
             await UnpackPackage(filePath, targetPath, pkgContext);
 
             string bundlePath = Path.Combine(targetPath, "worker-bundle");
@@ -485,6 +516,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
         }
 
+        // This needs to work with file from zip cache as well
+        // so checking file extensions might not be sufficient
         private CodePackageType GetPackageType(string filePath, RunFromPackageContext pkgContext)
         {
             // cloud build always builds squashfs
