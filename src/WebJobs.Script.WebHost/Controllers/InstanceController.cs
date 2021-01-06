@@ -1,7 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,13 +27,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IInstanceManager _instanceManager;
         private readonly ILogger _logger;
         private readonly StartupContextProvider _startupContextProvider;
+        private readonly IMeshServiceClient _meshServiceClient;
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider, IMeshServiceClient meshServiceClient)
         {
             _environment = environment;
             _instanceManager = instanceManager;
             _logger = loggerFactory.CreateLogger<InstanceController>();
             _startupContextProvider = startupContextProvider;
+            _meshServiceClient = meshServiceClient;
         }
 
         [HttpPost]
@@ -70,6 +76,73 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult GetInstanceInfo()
         {
             return Ok(_instanceManager.GetInstanceInfo());
+        }
+
+        [HttpGet]
+        [Route("admin/instance/mount")]
+        public async Task<IActionResult> Mount([FromQuery] string shareName, [FromQuery] string mountPath,
+            [FromQuery] bool decode)
+        {
+            string storageAccountName = _environment.GetEnvironmentVariable("StorageAccount");
+            string storageKey = _environment.GetEnvironmentVariable("StorageKey");
+
+            if (string.IsNullOrWhiteSpace(storageAccountName))
+            {
+                return Conflict("Empty storage account");
+            }
+
+            if (string.IsNullOrWhiteSpace(storageKey))
+            {
+                return Conflict("empty storage key");
+            }
+
+            _logger.LogInformation($"ShareName = {shareName}");
+            _logger.LogInformation($"MountPath = {mountPath}");
+            _logger.LogInformation($"Decode = {decode}");
+
+            if (decode)
+            {
+                mountPath = HttpUtility.UrlDecode(mountPath);
+            }
+
+            _logger.LogInformation($"Decoded MountPath = {mountPath}");
+            var azureStorageInfoValue = new AzureStorageInfoValue(Guid.NewGuid().ToString("N"), AzureStorageType.AzureFiles, storageAccountName,
+                shareName, storageKey, mountPath);
+            var result = await MountStorageAccount(azureStorageInfoValue);
+            _logger.LogInformation($"Mount result = {result}");
+
+            return Ok($"{shareName} {result}");
+        }
+
+        [HttpGet]
+        [Route("admin/instance/list")]
+        public string List([FromQuery] string mountPath, [FromQuery] bool decode)
+        {
+            if (decode)
+            {
+                mountPath = HttpUtility.UrlDecode(mountPath);
+            }
+
+            var stringBuilder = new StringBuilder();
+            foreach (var file in Directory.EnumerateFiles(mountPath))
+            {
+                stringBuilder.Append(file);
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        private async Task<bool> MountStorageAccount(AzureStorageInfoValue storageInfoValue)
+        {
+            var storageConnectionString =
+                Utility.BuildStorageConnectionString(storageInfoValue.AccountName, storageInfoValue.AccessKey, _environment.GetStorageSuffix());
+
+            if (!await _meshServiceClient.MountCifs(storageConnectionString, storageInfoValue.ShareName, storageInfoValue.MountPath))
+            {
+                throw new Exception($"Failed to mount BYOS fileshare {storageInfoValue.ShareName}");
+            }
+
+            return true;
         }
 
         [HttpPost]
