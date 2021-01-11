@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -23,13 +24,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IInstanceManager _instanceManager;
         private readonly ILogger _logger;
         private readonly StartupContextProvider _startupContextProvider;
+        private readonly IMeshServiceClient _meshServiceClient;
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider, IMeshServiceClient meshServiceClient)
         {
             _environment = environment;
             _instanceManager = instanceManager;
             _logger = loggerFactory.CreateLogger<InstanceController>();
             _startupContextProvider = startupContextProvider;
+            _meshServiceClient = meshServiceClient;
         }
 
         [HttpPost]
@@ -89,6 +92,29 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public IActionResult GetHttpHealthStatus()
         {
             // Reaching here implies that http health of the container is ok.
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/sethealth")]
+        public async Task<IActionResult> SetHealth([FromQuery] string eventType)
+        {
+            ContainerHealthEventType finalType = ContainerHealthEventType.Informational;
+            if (eventType.StartsWith("info", StringComparison.OrdinalIgnoreCase))
+            {
+                finalType = ContainerHealthEventType.Informational;
+            }
+            else if (eventType.StartsWith("warn", StringComparison.OrdinalIgnoreCase))
+            {
+                finalType = ContainerHealthEventType.Warning;
+            }
+            else if (eventType.StartsWith("fatal", StringComparison.OrdinalIgnoreCase))
+            {
+                finalType = ContainerHealthEventType.Fatal;
+            }
+
+            await _meshServiceClient.NotifyHealthEvent(finalType, GetType(),
+                nameof(SetHealth));
             return Ok();
         }
     }

@@ -18,6 +18,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         Task PublishContainerActivity(IEnumerable<ContainerFunctionExecutionActivity> activities);
 
-        Task NotifyHealthEvent(ContainerHealthEventType healthEventType, Type source, string description);
+        Task NotifyHealthEvent(ContainerHealthEventType healthEventType, Type source, string details);
     }
 }

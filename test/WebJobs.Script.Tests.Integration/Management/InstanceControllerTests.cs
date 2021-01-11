@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
 
             InstanceManager.Reset();
 
-            var instanceController = new InstanceController(environment, instanceManager, loggerFactory, startupContextProvider);
+            var instanceController = new InstanceController(environment, instanceManager, loggerFactory, startupContextProvider, null);
 
             const string containerEncryptionKey = "/a/vXvWJ3Hzgx4PFxlDUJJhQm5QVyGiu0NNLFm/ZMMg=";
             var hostAssignmentContext = new HostAssignmentContext
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             loggerFactory.AddProvider(loggerProvider);
 
             var startupContextProvider = new StartupContextProvider(environment, loggerFactory.CreateLogger<StartupContextProvider>());
-            var instanceController = new InstanceController(environment, null, loggerFactory, startupContextProvider);
+            var instanceController = new InstanceController(environment, null, loggerFactory, startupContextProvider, null);
             var scriptHostManager = new Mock<IScriptHostManager>();
 
             var fileSystem = new Mock<IFileSystem>();
@@ -137,7 +137,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             var loggerProvider = new TestLoggerProvider();
             loggerFactory.AddProvider(loggerProvider);
 
-            var instanceController = new InstanceController(null, null, loggerFactory, null);
+            var instanceController = new InstanceController(null, null, loggerFactory, null, null);
         
             var actionResult = instanceController.GetHttpHealthStatus();
             var okResult = actionResult as OkResult;
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
 
             InstanceManager.Reset();
 
-            var instanceController = new InstanceController(environment, instanceManager, loggerFactory, startupContextProvider);
+            var instanceController = new InstanceController(environment, instanceManager, loggerFactory, startupContextProvider, null);
 
             const string containerEncryptionKey = "/a/vXvWJ3Hzgx4PFxlDUJJhQm5QVyGiu0NNLFm/ZMMg=";
             var hostAssignmentContext = new HostAssignmentContext
@@ -224,7 +224,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
 
             InstanceManager.Reset();
 
-            var instanceController = new InstanceController(environment, instanceManager, loggerFactory, startupContextProvider);
+            var instanceController = new InstanceController(environment, instanceManager, loggerFactory, startupContextProvider, null);
 
             const string containerEncryptionKey = "/a/vXvWJ3Hzgx4PFxlDUJJhQm5QVyGiu0NNLFm/ZMMg=";
             var hostAssignmentContext = new HostAssignmentContext
@@ -268,7 +268,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             InstanceManager.Reset();
 
             var instanceController = new InstanceController(environment, instanceManager.Object, loggerFactory,
-                startupContextProvider);
+                startupContextProvider, null);
 
             const string containerEncryptionKey = "/a/vXvWJ3Hzgx4PFxlDUJJhQm5QVyGiu0NNLFm/ZMMg=";
             var hostAssignmentContext = new HostAssignmentContext

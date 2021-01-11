@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             return Task.CompletedTask;
         }
 
-        public Task NotifyHealthEvent(ContainerHealthEventType healthEventType, Type source, string description)
+        public Task NotifyHealthEvent(ContainerHealthEventType healthEventType, Type source, string details)
         {
             return Task.CompletedTask;
         }
