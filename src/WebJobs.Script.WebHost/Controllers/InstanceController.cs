@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -90,6 +92,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/side-crash")]
+        public async Task<IActionResult> SideCrash()
+        {
+            try
+            {
+                string url = "http://localhost:8081/api/crash?api-version=2017-09-01";
+                using (var httpClient = new HttpClient())
+                {
+                    var response = await httpClient.GetAsync(url);
+                    return Ok(response.StatusCode);
+                }
+            }
+            catch (Exception e)
+            {
+                return Ok(e.ToString());
+            }
         }
     }
 }
