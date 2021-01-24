@@ -72,7 +72,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                 var stopwatch = Stopwatch.StartNew();
                 _logger.LogInformation($"{nameof(WriteStreamToFileChunked)} Writing to file stream from ms");
 
-                var buffer = new byte[4 * 1024];
+                var buffer = new byte[32 * 1024];
                 var hasMore = true;
                 long totalBytesRead = 0;
 
@@ -96,9 +96,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
                     }
                     while (hasMore);
 
-                    _logger.LogInformation("{nameof(WriteToFileUsingStream)} All bytes written. Signalling download complete");
-                    _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
+                    _logger.LogInformation("{nameof(WriteToFileUsingStream)} All bytes written");
                 }
+
+                _logger.LogInformation("{nameof(WriteToFileUsingStream)} All bytes flushed. Signalling download complete");
+                _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
 
                 stopwatch.Stop();
                 _logger.LogInformation($"{nameof(WriteStreamToFileChunked)} Copy from ms to fs = {stopwatch.Elapsed.TotalMilliseconds}");
