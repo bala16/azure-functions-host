@@ -165,13 +165,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             using (var fs = new FileStream(GetZipDestinationPath(), FileMode.CreateNew,
                 FileAccess.Write))
             {
-                var length = stream.Length;
                 await stream.CopyToAsync(fs);
-                // fs.Flush(); // not needed?
-                _logger.LogInformation($"{nameof(WriteStreamToFileDirectly)} Copying stream to file. source bytes = {length} fs.Length = {fs.Length}");
-                _logger.LogInformation($"{nameof(WriteStreamToFileDirectly)} All bytes read. Signalling download complete");
-                _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
+                _logger.LogInformation($"{nameof(WriteStreamToFileDirectly)} All bytes copied to file stream. fs.Length = {fs.Length}");
             }
+
+            _logger.LogInformation($"{nameof(WriteStreamToFileDirectly)} All bytes flushed. Signalling download complete");
+            _zipFileDownloadService.NotifyDownloadComplete(GetZipDestinationPath());
         }
     }
 }

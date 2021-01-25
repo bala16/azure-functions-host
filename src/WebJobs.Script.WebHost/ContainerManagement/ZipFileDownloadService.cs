@@ -51,7 +51,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 
         public string WaitForDownload(TimeSpan timeSpan)
         {
-            _logger.LogInformation("{nameof(ZipFileDownloadService)} Waiting for download complete");
+            _logger.LogInformation($"{nameof(ZipFileDownloadService)} Waiting for download complete");
             _evt.WaitOne(timeSpan);
             return _path;
         }
