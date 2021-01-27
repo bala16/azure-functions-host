@@ -170,6 +170,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
                 var zipContentSection = await reader.ReadNextSectionAsync();
 
+                _logger.LogInformation($"{nameof(StreamSingle)} Time taken for zip content read = {zipTimer.Elapsed.TotalMilliseconds}");
+                zipTimer.Restart();
+
                 if (chunked)
                 {
                     await singleStreamerService.WriteZipContentToFileInChunks(zipContentSection);
