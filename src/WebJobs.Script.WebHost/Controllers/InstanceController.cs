@@ -1,6 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -23,13 +28,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IInstanceManager _instanceManager;
         private readonly ILogger _logger;
         private readonly StartupContextProvider _startupContextProvider;
+        private readonly IMeshServiceClient _meshServiceClient;
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider, IMeshServiceClient meshServiceClient)
         {
             _environment = environment;
             _instanceManager = instanceManager;
             _logger = loggerFactory.CreateLogger<InstanceController>();
             _startupContextProvider = startupContextProvider;
+            _meshServiceClient = meshServiceClient;
         }
 
         [HttpPost]
@@ -90,6 +97,76 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/publish-event")]
+        public async Task<IActionResult> PublishEvent([FromQuery] int eventType, [FromQuery] bool done)
+        {
+            ContainerHealthEventType evt = ContainerHealthEventType.Informational;
+            switch (eventType)
+            {
+                case 1:
+                    evt = ContainerHealthEventType.Informational;
+                    break;
+                case 2:
+                    evt = ContainerHealthEventType.Warning;
+                    break;
+                case 3:
+                    evt = ContainerHealthEventType.Fatal;
+                    break;
+            }
+
+            string details = "Specialization complete";
+            if (!done)
+            {
+                details = "Some event";
+            }
+
+            await _meshServiceClient.NotifyHealthEvent(evt, GetType(), details);
+            return Ok(evt.ToString() + " " + details);
+        }
+
+        [HttpGet]
+        [Route("admin/instance/add-mount")]
+        public async Task<IActionResult> AddMount([FromQuery] int method)
+        {
+            switch (method)
+            {
+                case 1:
+                    await _meshServiceClient.MountFuse("zip", "/tmp/zip", "/etc");
+                    return Ok("zip");
+                case 2:
+                    await _meshServiceClient.MountFuse("squashfs", "/tmp/squash", "/etc");
+                    return Ok("squashfs");
+                case 3:
+                    await _meshServiceClient.MountCifs("cs", "sh", "/etc");
+                    return Ok("cifs");
+            }
+
+            return Ok("unknown");
+        }
+
+        [HttpGet]
+        [Route("admin/instance/exit")]
+        public string Exit()
+        {
+            Process.GetCurrentProcess().Kill();
+            return DateTime.Now.ToString(CultureInfo.InvariantCulture);
+        }
+
+        [HttpGet]
+        [Route("admin/instance/list")]
+        public string ListFiles([FromQuery] string path)
+        {
+            _logger.LogInformation($"Listing {path}");
+            var stringBuilder = new StringBuilder();
+            foreach (var f in Directory.EnumerateFileSystemEntries($"/{path}"))
+            {
+                stringBuilder.AppendLine(f);
+            }
+
+            return stringBuilder.ToString();
         }
     }
 }
