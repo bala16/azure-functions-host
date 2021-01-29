@@ -16,6 +16,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 {
     public class LinuxContainerActivityPublisher : IHostedService, IDisposable, ILinuxContainerActivityPublisher
     {
+        private const int InitialFlushIntervalMs = 5 * 1000; // 5 seconds
+        private const int SecondFlushIntervalMs = 15 * 1000; // 15 seconds
         private const int FlushIntervalMs = 20 * 1000; // 20 seconds
         private const int LockTimeOutMs = 1 * 1000; // 1 second
 
@@ -29,6 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
         private DateTime _lastHeartBeatTime = DateTime.MinValue;
         private Timer _timer;
         private int _flushInProgress;
+        private bool _initialPublish;
 
         public LinuxContainerActivityPublisher(IOptionsMonitor<StandbyOptions> standbyOptions,
             IMeshServiceClient meshServiceClient, IEnvironment environment,
@@ -47,6 +50,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             _timer = new Timer(OnTimer, null, Timeout.Infinite, Timeout.Infinite);
             _uniqueActivities = new HashSet<ContainerFunctionExecutionActivity>();
             _flushInProgress = 0;
+            _initialPublish = true;
         }
 
         private void Start()
@@ -54,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             _logger.LogInformation($"Starting {nameof(LinuxContainerActivityPublisher)}");
 
             // start the timer by setting the due time
-            SetTimerInterval(_flushIntervalMs);
+            SetTimerInterval(InitialFlushIntervalMs);
         }
 
         private void OnStandbyOptionsChange()
@@ -96,8 +100,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 
         private async void OnTimer(object state)
         {
-            await FlushFunctionExecutionActivities();
-            SetTimerInterval(_flushIntervalMs);
+            _logger.LogInformation($"IsInitialPublish = {_initialPublish}");
+            if (_initialPublish)
+            {
+                _initialPublish = false;
+                await PublishSpecializationCompleteEvent();
+                SetTimerInterval(SecondFlushIntervalMs);
+            }
+            else
+            {
+                await FlushFunctionExecutionActivities();
+                SetTimerInterval(_flushIntervalMs);
+            }
+        }
+
+        private async Task PublishSpecializationCompleteEvent()
+        {
+            await _meshServiceClient.NotifyHealthEvent(ContainerHealthEventType.Informational, GetType(),
+                "Specialization complete");
         }
 
         private async Task FlushFunctionExecutionActivities()
