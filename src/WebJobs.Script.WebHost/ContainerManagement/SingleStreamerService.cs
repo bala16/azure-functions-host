@@ -163,7 +163,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             _logger.LogInformation($"{nameof(WriteStreamToFileDirectly)} {nameof(Stream)}");
 
             using (var fs = new FileStream(GetZipDestinationPath(), FileMode.CreateNew,
-                FileAccess.Write, FileShare.ReadWrite, 1024 * 1024)) // 1MB buffer
+                FileAccess.Write, FileShare.ReadWrite, 4 * 1024 * 1024)) // 4MB buffer
             {
                 await stream.CopyToAsync(fs);
                 _logger.LogInformation($"{nameof(WriteStreamToFileDirectly)} All bytes copied to file stream. fs.Length = {fs.Length}");
