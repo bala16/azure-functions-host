@@ -143,8 +143,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         [HttpPost]
         [Route("admin/instance/stream-zip-metadata")]
         [DisableFormValueModelBinding]
-        public async Task<IActionResult> StreamSingle([FromServices] SingleStreamerService singleStreamerService, [FromQuery] bool chunked = false)
+        public IActionResult StreamSingle([FromServices] SingleStreamerService singleStreamerService, [FromQuery] bool chunked = false)
         {
+            _logger.LogInformation($"X {nameof(StreamSingle)}");
+            return Ok();
+            /*
             _logger.LogInformation($"{nameof(StreamSingle)} Start Chunked = {chunked}");
 
             var stopwatch = Stopwatch.StartNew();
@@ -197,7 +200,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             {
                 stopwatch.Stop();
                 _logger.LogInformation($"{nameof(StreamSingle)} Total time taken = {stopwatch.Elapsed.TotalMilliseconds} Result = {success}");
-            }
+            }*/
         }
 
         private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
