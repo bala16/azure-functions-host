@@ -140,8 +140,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     await _meshServiceClient.MountFuse("squashfs", "/tmp/squash", "/etc");
                     return Ok("squashfs");
                 case 3:
-                    await _meshServiceClient.MountCifs("cs", "sh", "/etc");
-                    return Ok("cifs");
+                    var environmentVariable = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
+                    await _meshServiceClient.MountCifs(environmentVariable, "te1", "/etc");
+                    return Ok("cifs1");
+                case 4:
+                    var connectionString = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
+                    await _meshServiceClient.MountCifs(connectionString, "te1", "/abcd");
+                    return Ok("cifs2");
             }
 
             return Ok("unknown");
