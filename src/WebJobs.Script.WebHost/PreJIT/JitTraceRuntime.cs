@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.JitTrace
 {
@@ -18,26 +19,29 @@ namespace Microsoft.Diagnostics.JitTrace
         /// </summary>
         public static event Action<string> LogFailure;
 
-        private static void LogOnFailure(string failure)
+        private static void LogOnFailure(string failure, ILogger logger)
         {
             var log = LogFailure;
             if (log != null)
             {
                 log(failure);
             }
+            logger.LogInformation(new EventId(100, "PreJitFailures"), $"{failure}");
         }
 
         /// <summary>
         /// Prepare all the methods specified in a .jittrace file for execution
         /// </summary>
         /// <param name="fileName">Filename of .jittrace file</param>
+        /// <param name="logger">Logger</param>
         /// <param name="successfulPrepares">count of successful prepare operations. May exceed the could of lines in the jittrace file due to fuzzy matching</param>
         /// <param name="failedPrepares">count of failed prepare operations. May exceed the could of lines in the jittrace file due to fuzzy matching</param>
-        public static void Prepare(FileInfo fileName, out int successfulPrepares, out int failedPrepares)
+        public static void Prepare(FileInfo fileName, ILogger logger, out int successfulPrepares,
+            out int failedPrepares)
         {
             using (StreamReader sr = new StreamReader(fileName.FullName))
             {
-                Prepare(sr, out successfulPrepares, out failedPrepares);
+                Prepare(sr, logger, out successfulPrepares, out failedPrepares);
             }
         }
 
@@ -72,7 +76,7 @@ namespace Microsoft.Diagnostics.JitTrace
             }
 
             strStream.Position = 0;
-            Prepare(new StreamReader(strStream), out successfulPrepares, out failedPrepares);
+            Prepare(new StreamReader(strStream), null, out successfulPrepares, out failedPrepares);
         }
 
         /// <summary>
@@ -80,9 +84,11 @@ namespace Microsoft.Diagnostics.JitTrace
         /// for execution. Handles general purpose stream data.
         /// </summary>
         /// <param name="jittraceStream">Stream with .jittrace data</param>
+        /// <param name="logger">Logger</param>
         /// <param name="successfulPrepares">count of successful prepare operations. May exceed the could of lines in the jittrace file due to fuzzy matching</param>
         /// <param name="failedPrepares">count of failed prepare operations. May exceed the could of lines in the jittrace file due to fuzzy matching</param>
-        public static void Prepare(StreamReader jittraceStream, out int successfulPrepares, out int failedPrepares)
+        public static void Prepare(StreamReader jittraceStream, ILogger logger, out int successfulPrepares,
+            out int failedPrepares)
         {
             const string outerCsvEscapeChar = "~";
             const string innerCsvEscapeChar = ":";
@@ -114,7 +120,7 @@ namespace Microsoft.Diagnostics.JitTrace
                     if (owningType == null)
                     {
                         failedPrepares++;
-                        LogOnFailure(methodString);
+                        LogOnFailure(methodString, logger);
                         continue;
                     }
 
@@ -139,7 +145,7 @@ namespace Microsoft.Diagnostics.JitTrace
                     if (abortMethodDiscovery)
                     {
                         failedPrepares++;
-                        LogOnFailure(methodString);
+                        LogOnFailure(methodString, logger);
                         continue;
                     }
 
@@ -156,7 +162,7 @@ namespace Microsoft.Diagnostics.JitTrace
                         {
                             // Ctors with generic args don't make sense
                             failedPrepares++;
-                            LogOnFailure(methodString);
+                            LogOnFailure(methodString, logger);
                             continue;
                         }
                         membersFound = CtorMethodsThatMatch();
@@ -191,7 +197,7 @@ namespace Microsoft.Diagnostics.JitTrace
                         {
                             // This type no longer has a type initializer
                             failedPrepares++;
-                            LogOnFailure(methodString);
+                            LogOnFailure(methodString, logger);
                             continue;
                         }
                         membersFound = new RuntimeMethodHandle[] { owningType.TypeInitializer.MethodHandle };
@@ -253,19 +259,19 @@ namespace Microsoft.Diagnostics.JitTrace
                         catch
                         {
                             failedPrepares++;
-                            LogOnFailure(methodString);
+                            LogOnFailure(methodString, logger);
                         }
                     }
                     if (!foundAtLeastOneEntry)
                     {
                         failedPrepares++;
-                        LogOnFailure(methodString);
+                        LogOnFailure(methodString, logger);
                     }
                 }
                 catch
                 {
                     failedPrepares++;
-                    LogOnFailure(methodString);
+                    LogOnFailure(methodString, logger);
                 }
             }
         }
