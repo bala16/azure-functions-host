@@ -37,7 +37,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
                 PreJitPrepare(WarmUpConstants.JitTraceFileName);
                 if (_environment.IsLinuxConsumption())
                 {
-                    PreJitPrepare(WarmUpConstants.LinuxJitTraceFileName);
+                    _logger.LogInformation($"Skipping Linux jit");
+                    // PreJitPrepare(WarmUpConstants.LinuxJitTraceFileName);
                 }
 
                 await WarmUp(httpContext.Request);
