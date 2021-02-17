@@ -117,6 +117,21 @@ namespace Microsoft.Diagnostics.JitTrace
 
                     Type owningType = Type.GetType(methodStrComponents[1], false);
 
+                    var assembly = Assembly.LoadFrom("/azure-functions-host/Microsoft.Azure.WebJobs.Script.WebHost.dll");
+
+                    if (owningType == null)
+                    {
+                        var tt = assembly.GetType(methodStrComponents[1], false);
+                        if (tt != null)
+                        {
+                            Console.WriteLine($"<----Loaded from assembly {methodString}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"<----NOT in assembly {methodString}");
+                        }
+                    }
+
                     // owningType failed to load above. Skip rest of method discovery
                     if (owningType == null)
                     {
@@ -273,6 +288,17 @@ namespace Microsoft.Diagnostics.JitTrace
                 {
                     failedPrepares++;
                     LogOnFailure(methodString, logger, $"Outer Catch Ex={ex}");
+                }
+            }
+
+            var aa = Assembly.LoadFrom("/azure-functions-host/Microsoft.Azure.WebJobs.Script.WebHost.dll");
+
+            var qq = aa.GetTypes();
+            foreach (var type in qq)
+            {
+                if (type.FullName.Contains("InstanceManager+<") && type.FullName.Contains("MountStorageAccount>"))
+                {
+                    Console.WriteLine("---->" + type);
                 }
             }
         }
