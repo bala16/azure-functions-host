@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
             if (file.Exists)
             {
-                JitTraceRuntime.Prepare(file, out int successfulPrepares, out int failedPrepares);
+                JitTraceRuntime.Prepare(file, _logger, out int successfulPrepares, out int failedPrepares);
 
                 // We will need to monitor failed vs success prepares and if the failures increase, it means code paths have diverged or there have been updates on dotnet core side.
                 // When this happens, we will need to regenerate the coldstart.jittrace file.
