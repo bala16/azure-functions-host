@@ -13,8 +13,10 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
 using Microsoft.Azure.WebJobs.Script.WebHost.Filters;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
+using Microsoft.Azure.WebJobs.Script.WebHost.Middleware;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
+using Microsoft.Diagnostics.JitTrace;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 
@@ -216,6 +218,34 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             }
 
             return boundary;
+        }
+
+        [HttpGet]
+        [Route("admin/instance/prejit")]
+        public string PreJit()
+        {
+            try
+            {
+                var path = Path.Combine(
+                    Path.GetDirectoryName(new Uri(typeof(HostWarmupMiddleware).Assembly.CodeBase).LocalPath),
+                    WarmUpConstants.PreJitFolderName, WarmUpConstants.LinuxJitTraceFileName);
+
+                var file = new FileInfo(path);
+
+                if (file.Exists)
+                {
+                    JitTraceRuntime.Prepare(file, _logger, out int successfulPrepares, out int failedPrepares);
+                    var message =
+                        $"PreJIT Successful prepares: {successfulPrepares}, Failed prepares: {failedPrepares} FileName = {WarmUpConstants.LinuxJitTraceFileName}";
+                    return message;
+                }
+
+                return "File not found";
+            }
+            catch (Exception e)
+            {
+                return $"Exception = {e}";
+            }
         }
     }
 }
