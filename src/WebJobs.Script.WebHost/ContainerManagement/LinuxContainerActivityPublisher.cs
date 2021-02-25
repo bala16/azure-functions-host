@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NuGet.Packaging.Signing;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
 {
@@ -121,6 +122,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement
             {
                 await _meshServiceClient.NotifyHealthEvent(ContainerHealthEventType.Informational, GetType(),
                     SpecializationCompleteEvent);
+
+                throw new TimestampException("Exception.");
             }
             catch (Exception ex)
             {
