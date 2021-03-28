@@ -3,8 +3,10 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.Logging;
 using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.FileProvisioning
@@ -27,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Script.FileProvisioning
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            LinuxScriptLogger.Instance.Log($"Start {nameof(FuncAppFileProvisioningService)} {nameof(StartAsync)}");
             if (!_environment.IsFileSystemReadOnly())
             {
                 var funcAppFileProvisioner = _funcAppFileProvisionerFactory.CreatFileProvisioner(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerRuntimeSettingName));
@@ -35,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.FileProvisioning
                     await funcAppFileProvisioner.ProvisionFiles(_options.CurrentValue.ScriptPath);
                 }
             }
+            LinuxScriptLogger.Instance.Log($"End {nameof(FuncAppFileProvisioningService)} {nameof(StartAsync)}");
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

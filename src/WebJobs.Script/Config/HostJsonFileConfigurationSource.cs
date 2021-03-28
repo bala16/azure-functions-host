@@ -65,12 +65,15 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
                 _path = new Stack<string>();
                 _logger = logger;
                 _metricsLogger = metricsLogger;
+                _logger.LogInformation($"ctor {nameof(HostJsonFileConfigurationProvider)}");
             }
 
             public override void Load()
             {
+                _logger.LogInformation($"{nameof(Load)} {nameof(HostJsonFileConfigurationProvider)}");
                 JObject hostJson = LoadHostConfigurationFile();
                 ProcessObject(hostJson);
+                _logger.LogInformation($"{nameof(Load)} done {nameof(HostJsonFileConfigurationProvider)}");
             }
 
             private void ProcessObject(JObject hostJson)
@@ -193,6 +196,7 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
 
             internal JObject LoadHostConfig(string configFilePath)
             {
+                _logger.LogInformation($"Start {nameof(LoadHostConfig)}");
                 using (_metricsLogger.LatencyEvent(MetricEventNames.LoadHostConfiguration))
                 {
                     JObject hostConfigObject;

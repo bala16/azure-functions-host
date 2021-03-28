@@ -72,6 +72,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public Task SpecializeHostAsync()
         {
+            _logger.LogInformation($"Start {nameof(StandbyManager)} {nameof(SpecializeHostAsync)}");
             IDisposable latencyEvent = _metricsLogger.LatencyEvent(MetricEventNames.SpecializationSpecializeHost);
             return _specializationTask.Value.ContinueWith(t =>
             {
@@ -88,6 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public async Task SpecializeHostCoreAsync()
         {
+            _logger.LogInformation($"Start {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
             // Go async immediately to ensure that any async context from
             // the PlaceholderSpecializationMiddleware is properly suppressed.
             await Task.Yield();
@@ -99,10 +101,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             // DateTime caches timezone information, so we need to clear the cache.
             TimeZoneInfo.ClearCachedData();
 
+            _logger.LogInformation($"Cleared TZ {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
             // Trigger a configuration reload to pick up all current settings
             _configuration?.Reload();
 
+            _logger.LogInformation($"Reloaded {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
+
             _hostNameProvider.Reset();
+
+            _logger.LogInformation($"Reset {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
 
             // Reset the shared load context to ensure we're reloading
             // user dependencies
@@ -114,18 +121,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             using (_metricsLogger.LatencyEvent(MetricEventNames.SpecializationLanguageWorkerChannelManagerSpecialize))
             {
+                _logger.LogInformation($"RPC SpecializeAsync {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
                 await _rpcWorkerChannelManager.SpecializeAsync();
             }
 
             using (_metricsLogger.LatencyEvent(MetricEventNames.SpecializationRestartHost))
             {
+                _logger.LogInformation($"Restart host {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
                 await _scriptHostManager.RestartHostAsync();
             }
 
             using (_metricsLogger.LatencyEvent(MetricEventNames.SpecializationDelayUntilHostReady))
             {
+                _logger.LogInformation($"SpecializationDelayUntilHostReady {nameof(StandbyManager)} {nameof(SpecializeHostCoreAsync)}");
                 await _scriptHostManager.DelayUntilHostReady();
             }
+            _logger.LogInformation($"End {nameof(SpecializeHostCoreAsync)}");
         }
 
         public void NotifyChange()
@@ -159,6 +170,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public async Task InitializeAsync()
         {
+            _logger.LogInformation($"Start {nameof(StandbyManager)} {nameof(InitializeAsync)}");
             using (_metricsLogger.LatencyEvent(MetricEventNames.SpecializationStandbyManagerInitialize))
             {
                 if (await _semaphore.WaitAsync(timeout: TimeSpan.FromSeconds(30)))
@@ -179,10 +191,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     }
                 }
             }
+            _logger.LogInformation($"End {nameof(StandbyManager)} {nameof(InitializeAsync)}");
         }
 
         private async Task CreateStandbyWarmupFunctions()
         {
+            _logger.LogInformation($"Start {nameof(StandbyManager)} {nameof(CreateStandbyWarmupFunctions)}");
+
             ScriptApplicationHostOptions options = _options.CurrentValue;
 
             if (!options.IsStandbyConfiguration)
@@ -217,13 +232,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         private async void OnSpecializationTimerTick(object state)
         {
+            _logger.LogInformation($"Start {nameof(StandbyManager)} {nameof(OnSpecializationTimerTick)}");
             if (!_webHostEnvironment.InStandbyMode && _environment.IsContainerReady())
             {
                 _specializationTimer?.Dispose();
                 _specializationTimer = null;
 
+                _logger.LogInformation($"Before {nameof(StandbyManager)} {nameof(OnSpecializationTimerTick)}");
                 await SpecializeHostAsync();
+                _logger.LogInformation($"After {nameof(StandbyManager)} {nameof(OnSpecializationTimerTick)}");
             }
+            _logger.LogInformation($"End {nameof(StandbyManager)} {nameof(OnSpecializationTimerTick)}");
         }
 
         public void Dispose()

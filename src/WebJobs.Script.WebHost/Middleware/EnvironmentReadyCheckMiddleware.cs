@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 {
@@ -13,17 +14,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
     public partial class EnvironmentReadyCheckMiddleware
     {
         private readonly RequestDelegate _next;
+        private readonly ILogger<EnvironmentReadyCheckMiddleware> _logger;
 
-        public EnvironmentReadyCheckMiddleware(RequestDelegate next)
+        public EnvironmentReadyCheckMiddleware(RequestDelegate next, ILogger<EnvironmentReadyCheckMiddleware> logger)
         {
             _next = next;
+            _logger = logger;
         }
 
         public async Task Invoke(HttpContext httpContext, IScriptWebHostEnvironment webHostEnvironment)
         {
+            _logger.LogInformation($"{nameof(EnvironmentReadyCheckMiddleware)} Invoke");
             if (webHostEnvironment.DelayRequestsEnabled)
             {
+                _logger.LogInformation($"{nameof(EnvironmentReadyCheckMiddleware)} waiting for DelayRequestsEnabled");
                 await webHostEnvironment.DelayCompletionTask;
+                _logger.LogInformation($"{nameof(EnvironmentReadyCheckMiddleware)} done wait for DelayRequestsEnabled");
             }
 
             await _next.Invoke(httpContext);

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Script.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -27,6 +28,8 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
 
         public void Configure(ScriptJobHostOptions options)
         {
+            LinuxScriptLogger.Instance.Log($"Start {nameof(ScriptApplicationHostOptions)} {nameof(Configure)}");
+
             // Add the standard built in watched directories set to any the user may have specified
             options.WatchDirectories.Add("node_modules");
 
@@ -43,6 +46,8 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
 
             if (jobHostSection != null)
             {
+                LinuxScriptLogger.Instance.Log($"Bind jobHostSection {nameof(ScriptApplicationHostOptions)} {nameof(Configure)}");
+
                 jobHostSection.Bind(options);
 
                 var fileLoggingMode = jobHostSection.GetSection(ConfigurationSectionNames.Logging)
@@ -53,6 +58,10 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
                 }
                 Utility.ValidateRetryOptions(options.Retry);
             }
+            else
+            {
+                LinuxScriptLogger.Instance.Log($"No Bind jobHostSection = null {nameof(ScriptApplicationHostOptions)} {nameof(Configure)}");
+            }
 
             // FunctionTimeout
             ConfigureFunctionTimeout(options);
@@ -61,7 +70,12 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
             // disable file watching
             if (_environment.IsFileSystemReadOnly())
             {
+                LinuxScriptLogger.Instance.Log($"Disabling file watch {nameof(ScriptApplicationHostOptions)} {nameof(Configure)}");
                 options.FileWatchingEnabled = false;
+            }
+            else
+            {
+                LinuxScriptLogger.Instance.Log($"Not disabling file watch {nameof(ScriptApplicationHostOptions)} {nameof(Configure)}");
             }
 
             // Set the root script path to the value the runtime was initialized with:

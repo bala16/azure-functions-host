@@ -275,7 +275,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 _logger.LogInformation("Triggering specialization");
                 _webHostEnvironment.FlagAsSpecializedAndReady();
 
+                _logger.LogInformation("Resuming requests");
                 _webHostEnvironment.ResumeRequests();
+                _logger.LogInformation("Resumed requests");
             }
         }
 
