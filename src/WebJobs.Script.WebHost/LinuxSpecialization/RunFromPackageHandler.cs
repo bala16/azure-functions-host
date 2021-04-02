@@ -31,21 +31,30 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
             _environment = environment;
             _runFromPackageDeploymentLockManager = runFromPackageDeploymentLockManager;
             _logger = logger;
+            _logger.LogInformation($"ctor {nameof(RunFromPackageHandler)}");
         }
 
         public string GetCurrentDeploymentMarkerFilePath()
         {
-            return Path.Combine(_environment.GetDeploymentMetadataFolderPath(), CurrentDeploymentMarkerFile);
+            var deploymentMetadataFolderPath = _environment.GetDeploymentMetadataFolderPath();
+            _logger.LogInformation($"deploymentMetadataFolderPath = {deploymentMetadataFolderPath}");
+            var currentDeploymentMarkerFilePath = Path.Combine(deploymentMetadataFolderPath, CurrentDeploymentMarkerFile);
+            _logger.LogInformation($"{nameof(RunFromPackageHandler)} {nameof(GetCurrentDeploymentMarkerFilePath)} = {currentDeploymentMarkerFilePath}");
+            return currentDeploymentMarkerFilePath;
         }
 
         private bool IsValidFunctionsFolder(string path)
         {
-            return Directory.Exists(Path.Combine(path, ScriptConstants.HostMetadataFileName));
+            var isValidFunctionsFolder = Directory.Exists(Path.Combine(path, ScriptConstants.HostMetadataFileName));
+            _logger.LogInformation($"{nameof(RunFromPackageHandler)} {nameof(IsValidFunctionsFolder)} = {isValidFunctionsFolder}");
+            return isValidFunctionsFolder;
         }
 
         private bool IsEmpty(string path)
         {
-            return Directory.EnumerateFileSystemEntries(path).Any();
+            var isEmpty = Directory.EnumerateFileSystemEntries(path).Any();
+            _logger.LogInformation($"{nameof(RunFromPackageHandler)} {nameof(IsEmpty)} = {isEmpty}");
+            return isEmpty;
         }
 
         // The following scenarios will trigger a refresh
@@ -58,9 +67,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
             try
             {
                 var markerFilePath = GetCurrentDeploymentMarkerFilePath();
+
+                _logger.LogInformation($"{nameof(RunFromPackageHandler)} {nameof(markerFilePath)} = {markerFilePath}");
+
                 if (!File.Exists(markerFilePath))
                 {
                     // If we cant find the marker, we err on the side of redeploying to avoid leaving the app running with old content
+                    _logger.LogWarning("No deployment marker file found.");
                     return true;
                 }
 
@@ -68,11 +81,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
                 var lastKnownDeploymentUrl = await File.ReadAllTextAsync(markerFilePath);
                 if (string.IsNullOrWhiteSpace(lastKnownDeploymentUrl))
                 {
+                    _logger.LogWarning("Couldn't read last known deployment url.");
                     return true;
                 }
 
                 var contentChanged = !string.Equals(lastKnownDeploymentUrl, pkgContext.Url, StringComparison.OrdinalIgnoreCase);
-                _logger.LogInformation($"Has RunFromPackage url change? {contentChanged}");
+                _logger.LogInformation($"Has RunFromPackage url changed? {contentChanged}");
                 return contentChanged;
             }
             catch (Exception e)
@@ -86,9 +100,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
         {
             try
             {
+                _logger.LogInformation($"Committing deployment");
                 var markerFilePath = GetCurrentDeploymentMarkerFilePath();
+
+                _logger.LogInformation($"Writing to deployment markerfile = {markerFilePath}");
+
                 await File.WriteAllTextAsync(markerFilePath,
                     _environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName));
+
+                _logger.LogInformation($"Wrote to deployment markerfile = {markerFilePath}");
             }
             catch (Exception e)
             {
@@ -100,12 +120,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
         // Uses local disk as backing store
         public override async Task<bool> DeployToLocalDisk(HostAssignmentContext assignmentContext, RunFromPackageContext pkgContext)
         {
+            _logger.LogInformation($"Start {nameof(DeployToLocalDisk)}");
             return await ApplyBlobPackageContext(assignmentContext, pkgContext);
         }
 
         // Uses Azure Files as backing store. Doesn't support WEBSITE_RUN_FROM_PACKAGE=1 or SCM_RUN_FROM_PACKAGE
         public override async Task<bool> DeployToAzureFiles(HostAssignmentContext assignmentContext, RunFromPackageContext runFromPackageContext)
         {
+            _logger.LogInformation($"Start {nameof(DeployToAzureFiles)}");
+
             try
             {
                 if (!assignmentContext.IsAzureFilesContentShareConfigured())
@@ -123,6 +146,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
                 }
 
                 var contentRootFolder = _environment.GetContentRootFolder();
+                _logger.LogInformation($"{nameof(contentRootFolder)} = {contentRootFolder}");
+
                 var shouldDeploy = false;
 
                 if (IsEmpty(contentRootFolder))
@@ -156,19 +181,25 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
                     return true;
                 }
 
+                _logger.LogInformation($"Acquiring deployment lock");
+
                 var deploymentLock = await _runFromPackageDeploymentLockManager.TryAcquire();
                 if (deploymentLock == null)
                 {
+                    _logger.LogWarning($"Failed to acquire deployment lock. Using local disk for deployment.");
                     // We couldn't acquire a lock for some reason. Fall back to using Local disk as fallback.
                     return false;
                 }
 
                 using (deploymentLock)
                 {
+                    _logger.LogInformation($"Starting {nameof(ApplyBlobPackageContext)}");
                     var success = await ApplyBlobPackageContext(assignmentContext, runFromPackageContext);
                     if (success)
                     {
+                        _logger.LogInformation($"Committing deployment {nameof(DeployToAzureFiles)}");
                         await CommitDeployment();
+                        _logger.LogInformation($"Committed deployment {nameof(DeployToAzureFiles)}");
                     }
 
                     return success;

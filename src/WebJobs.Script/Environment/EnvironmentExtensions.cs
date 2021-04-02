@@ -477,7 +477,6 @@ namespace Microsoft.Azure.WebJobs.Script
         // returns /home/data/deploymentmetadata/{sitename-slotname}
         public static string GetDeploymentMetadataFolderPath(this IEnvironment environment)
         {
-            var home = environment.GetEnvironmentVariable(AzureWebsiteHomePath);
             var siteSlotName = environment.GetAzureWebsiteUniqueSlotName();
             return Path.Combine(environment.GetRootDeploymentMetadataFolderPath(), siteSlotName);
         }

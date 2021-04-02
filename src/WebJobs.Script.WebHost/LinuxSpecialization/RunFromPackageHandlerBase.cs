@@ -36,6 +36,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
             _meshServiceClient = meshServiceClient;
             _metricsLogger = metricsLogger;
             _logger = logger;
+            _logger.LogInformation($"ctor {nameof(RunFromPackageHandlerBase)}");
         }
 
         public abstract Task<bool> DeployToLocalDisk(HostAssignmentContext assignmentContext, RunFromPackageContext pkgContext);
@@ -44,6 +45,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
 
         protected virtual async Task<bool> ApplyBlobPackageContext(HostAssignmentContext assignmentContext, RunFromPackageContext pkgContext)
         {
+            _logger.LogInformation($"Start {nameof(ApplyBlobPackageContext)}");
+
             // We need to get the non-PlaceholderMode script Path so we can unzip to the correct location.
             // This asks the factory to skip the PlaceholderMode check when configuring options.
             var options = _optionsFactory.Create(ScriptApplicationHostOptionsSetup.SkipPlaceholder);
@@ -64,6 +67,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
 
         public async Task<string> Download(RunFromPackageContext pkgContext)
         {
+            _logger.LogInformation($"Start {nameof(Download)}");
+
             var zipUri = new Uri(pkgContext.Url);
             if (!Utility.TryCleanUrl(zipUri.AbsoluteUri, out string cleanedUrl))
             {

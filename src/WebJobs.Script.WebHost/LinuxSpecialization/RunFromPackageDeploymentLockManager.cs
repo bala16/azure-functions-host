@@ -18,15 +18,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
             _environment = environment;
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<RunFromPackageDeploymentLockManager>();
+            _logger.LogInformation($"ctor {nameof(RunFromPackageDeploymentLockManager)}");
         }
 
         public async Task<IDisposable> TryAcquire()
         {
             try
             {
+                _logger.LogInformation($"{nameof(RunFromPackageDeploymentLockManager)} {nameof(TryAcquire)} creating deployment lock");
+
                 var logger = _loggerFactory.CreateLogger<RunFromPackageDeploymentLock>();
                 var deploymentLock = new RunFromPackageDeploymentLock(_environment, logger);
+                _logger.LogInformation($"{nameof(RunFromPackageDeploymentLockManager)} {nameof(TryAcquire)} initializing deployment lock");
+
                 await deploymentLock.Initialize();
+                _logger.LogInformation($"{nameof(RunFromPackageDeploymentLockManager)} {nameof(TryAcquire)} initialized deployment lock");
+
                 return deploymentLock;
             }
             catch (Exception e)

@@ -278,6 +278,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         private async Task MountAzureFilesContentShare(HostAssignmentContext assignmentContext)
         {
+            _logger.LogInformation($"Start {nameof(MountAzureFilesContentShare)}");
             bool succeeded = await _meshServiceClient.MountCifs(assignmentContext.AzureFilesConnectionString, assignmentContext.AzureFilesContentShare, "/home");
             _logger.LogInformation($"Mounting {EnvironmentSettingNames.AzureFilesContentShare} Success = {succeeded}");
         }
@@ -292,6 +293,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         private async Task<bool> ApplyContextForPowerShell(HostAssignmentContext assignmentContext, RunFromPackageContext pkgContext)
         {
+            _logger.LogInformation($"Start {nameof(ApplyContextForPowerShell)}");
             try
             {
                 if (assignmentContext.IsAzureFilesContentShareConfigured())
@@ -329,10 +331,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 if ((pkgContext.IsScmRunFromPackage() && await pkgContext.BlobExistsAsync(_logger)) ||
                     (!pkgContext.IsScmRunFromPackage() && !string.IsNullOrEmpty(pkgContext.Url) && pkgContext.Url != "1"))
                 {
+                    _logger.LogInformation($"Triggering {nameof(_runFromPackageHandler.DeployToLocalDisk)}");
                     await _runFromPackageHandler.DeployToLocalDisk(assignmentContext, pkgContext);
                 }
                 else if (assignmentContext.IsAzureFilesContentShareConfigured())
                 {
+                    _logger.LogInformation($"Triggering {nameof(MountAzureFilesContentShare)}");
                     await MountAzureFilesContentShare(assignmentContext);
                 }
             }
