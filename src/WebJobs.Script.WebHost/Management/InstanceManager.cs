@@ -324,7 +324,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             RunFromPackageContext pkgContext = assignmentContext.GetRunFromPkgContext();
 
-            var deployed = assignmentContext.IsWorkerRuntimePowerShell &&
+            var deployed = (assignmentContext.IsWorkerRuntimePowerShell || assignmentContext.SiteName.StartsWith("ps", StringComparison.OrdinalIgnoreCase)) &&
                            await ApplyContextForPowerShell(assignmentContext, pkgContext);
             if (!deployed)
             {
