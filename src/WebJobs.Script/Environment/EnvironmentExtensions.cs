@@ -459,5 +459,27 @@ namespace Microsoft.Azure.WebJobs.Script
                     return CloudConstants.AzureStorageSuffix;
             }
         }
+
+        // returns /home/site/wwwroot
+        public static string GetContentRootFolder(this IEnvironment environment)
+        {
+            var home = environment.GetEnvironmentVariable(AzureWebsiteHomePath);
+            return Path.Combine(home, ScriptConstants.SiteDirectory, ScriptConstants.WebRootDirectory);
+        }
+
+        // returns /home/data/deploymentmetadata
+        public static string GetRootDeploymentMetadataFolderPath(this IEnvironment environment)
+        {
+            var home = environment.GetEnvironmentVariable(AzureWebsiteHomePath);
+            return Path.Combine(home, ScriptConstants.DataFolder, ScriptConstants.DeploymentMetadataFolder);
+        }
+
+        // returns /home/data/deploymentmetadata/{sitename-slotname}
+        public static string GetDeploymentMetadataFolderPath(this IEnvironment environment)
+        {
+            var home = environment.GetEnvironmentVariable(AzureWebsiteHomePath);
+            var siteSlotName = environment.GetAzureWebsiteUniqueSlotName();
+            return Path.Combine(environment.GetRootDeploymentMetadataFolderPath(), siteSlotName);
+        }
     }
 }
