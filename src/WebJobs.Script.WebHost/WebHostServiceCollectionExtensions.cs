@@ -270,7 +270,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             });
 
             services.AddSingleton<RunFromPackageDeploymentLockManager>();
-            services.AddSingleton<RunFromPackageHandler>();
+            services.AddSingleton<IRunFromPackageHandler, RunFromPackageHandler>();
         }
 
         private static IServiceCollection ConfigureOptionsWithChangeTokenSource<TOptions, TOptionsSetup, TOptionsChangeTokenSource>(this IServiceCollection services)
