@@ -47,5 +47,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
         {
             return Task.CompletedTask;
         }
+
+        public Task RunLn(string sourcePath, string symLinkPath)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

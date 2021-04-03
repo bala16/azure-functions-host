@@ -28,13 +28,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         private readonly IInstanceManager _instanceManager;
         private readonly ILogger _logger;
         private readonly StartupContextProvider _startupContextProvider;
+        private readonly IMeshServiceClient _meshServiceClient;
 
-        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider)
+        public InstanceController(IEnvironment environment, IInstanceManager instanceManager, ILoggerFactory loggerFactory, StartupContextProvider startupContextProvider, IMeshServiceClient meshServiceClient)
         {
             _environment = environment;
             _instanceManager = instanceManager;
             _logger = loggerFactory.CreateLogger<InstanceController>();
             _startupContextProvider = startupContextProvider;
+            _meshServiceClient = meshServiceClient;
         }
 
         [HttpPost]
@@ -117,6 +119,40 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             }
 
             return stringBuilder.ToString();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/add-mount")]
+        public async Task<IActionResult> AddMount([FromQuery] int method)
+        {
+            switch (method)
+            {
+                case 1:
+                    await _meshServiceClient.MountFuse("zip", "/tmp/zip", "/etc");
+                    return Ok("zip");
+                case 2:
+                    await _meshServiceClient.MountFuse("squashfs", "/tmp/squash", "/etc");
+                    return Ok("squashfs");
+                case 3:
+                    var environmentVariable = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
+                    await _meshServiceClient.MountCifs(environmentVariable, "te1", "/etc");
+                    return Ok("cifs1");
+                case 4:
+                    var connectionString = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
+                    await _meshServiceClient.MountCifs(connectionString, "te1", "/abcd");
+                    return Ok("cifs2");
+                case 5:
+                    var existingSourcePath = "/FuncExtensionBundles";
+                    var mountPath = "home/site/wwwroot";
+                    await _meshServiceClient.RunLn(existingSourcePath, mountPath);
+                    return Ok("ln5");
+                case 6:
+                    var environmentVariable2 = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
+                    await _meshServiceClient.MountCifs(environmentVariable2, "remoteroot", "/home/site/wwwroot");
+                    return Ok("cifs6");
+            }
+
+            return Ok("unknown");
         }
     }
 }

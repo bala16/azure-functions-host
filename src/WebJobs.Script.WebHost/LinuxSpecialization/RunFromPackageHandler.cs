@@ -181,6 +181,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
                     return true;
                 }
 
+                // Clear current contents
+                Empty(contentRootFolder);
+
                 _logger.LogInformation($"Acquiring deployment lock");
 
                 var deploymentLock = await _runFromPackageDeploymentLockManager.TryAcquire();
@@ -209,6 +212,20 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.LinuxSpecialization
             {
                 _logger.LogWarning(nameof(DeployToAzureFiles), e);
                 return false;
+            }
+        }
+
+        private void Empty(string path)
+        {
+            System.IO.DirectoryInfo di = new DirectoryInfo(path);
+
+            foreach (FileInfo file in di.GetFiles())
+            {
+                file.Delete();
+            }
+            foreach (DirectoryInfo dir in di.GetDirectories())
+            {
+                dir.Delete(true);
             }
         }
     }
