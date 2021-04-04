@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             _meshServiceClientMock = new Mock<IMeshServiceClient>(MockBehavior.Strict);
 
             _instanceManager = new InstanceManager(_optionsFactory, _httpClient, _scriptWebEnvironment, _environment,
-                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), _meshServiceClientMock.Object);
+                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), _meshServiceClientMock.Object, null);
 
             InstanceManager.Reset();
         }
@@ -340,7 +340,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
 
             var instanceManager = new InstanceManager(_optionsFactory, new HttpClient(handlerMock.Object),
                 scriptWebEnvironment, environment, loggerFactory.CreateLogger<InstanceManager>(),
-                new TestMetricsLogger(), null);
+                new TestMetricsLogger(), null, null);
 
             var assignmentContext = new HostAssignmentContext
             {
@@ -677,7 +677,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
                 client.MountBlob(Utility.BuildStorageConnectionString(account3, accessKey3, CloudConstants.AzureStorageSuffix), share3, targetPath3)).Returns(Task.FromResult(true));
 
             var instanceManager = new InstanceManager(_optionsFactory, _httpClient, _scriptWebEnvironment, _environment,
-                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), meshInitServiceClient.Object);
+                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), meshInitServiceClient.Object, null);
 
             instanceManager.StartAssignment(hostAssignmentContext);
 
@@ -729,7 +729,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
                 client.MountCifs(Utility.BuildStorageConnectionString(account1, accessKey1, CloudConstants.AzureStorageSuffix), share1, targetPath1)).Returns(Task.FromResult(true));
 
             var instanceManager = new InstanceManager(_optionsFactory, _httpClient, _scriptWebEnvironment, _environment,
-                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), meshInitServiceClient.Object);
+                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), meshInitServiceClient.Object, null);
 
             instanceManager.StartAssignment(hostAssignmentContext);
 
@@ -762,7 +762,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             InstanceManager.Reset();
 
             return new InstanceManager(_optionsFactory, new HttpClient(handlerMock.Object), _scriptWebEnvironment, _environment,
-                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), meshServiceClient);
+                _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), meshServiceClient, null);
         }
 
         public void Dispose()

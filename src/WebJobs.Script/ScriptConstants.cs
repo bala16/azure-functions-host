@@ -187,5 +187,10 @@ namespace Microsoft.Azure.WebJobs.Script
         public static readonly long DefaultMaxRequestBodySize = 104857600;
 
         public static readonly ImmutableArray<string> SystemLogCategoryPrefixes = ImmutableArray.Create("Microsoft.Azure.WebJobs.", "Function.", "Worker.", "Host.");
+
+        public static readonly string SiteDirectory = "site";
+        public static readonly string WebRootDirectory = "wwwroot";
+        public static readonly string DataFolder = "data";
+        public static readonly string DeploymentMetadataFolder = "deploymentmetadata";
     }
 }

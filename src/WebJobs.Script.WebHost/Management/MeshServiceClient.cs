@@ -58,6 +58,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 new KeyValuePair<string, string>("targetPath", scriptPath),
             });
 
+        public async Task MountLocal(string sourcePath, string symLinkPath)
+        {
+            await SendAsync(new[]
+            {
+                new KeyValuePair<string, string>(Operation, "mountlocal"),
+                new KeyValuePair<string, string>("sourcePath", sourcePath),
+                new KeyValuePair<string, string>("symLinkPath", symLinkPath),
+            });
+        }
+
         public async Task PublishContainerActivity(IEnumerable<ContainerFunctionExecutionActivity> activities)
         {
             _logger.LogDebug($"Publishing {activities.Count()} container activities");
