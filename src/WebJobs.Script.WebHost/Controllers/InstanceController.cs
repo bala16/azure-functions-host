@@ -135,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                     return Ok("squashfs");
                 case 3:
                     var environmentVariable = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
-                    await _meshServiceClient.MountCifs(environmentVariable, "te1", "/etc");
+                    await _meshServiceClient.MountCifs(environmentVariable, "home", "/home");
                     return Ok("cifs1");
                 case 4:
                     var connectionString = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
@@ -144,7 +144,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 case 5:
                     var existingSourcePath = "/FuncExtensionBundles";
                     var mountPath = "home/site/wwwroot";
-                    await _meshServiceClient.RunLn(existingSourcePath, mountPath);
+                    await _meshServiceClient.MountLocal(existingSourcePath, mountPath);
                     return Ok("ln5");
                 case 6:
                     var environmentVariable2 = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureFilesConnectionString);
