@@ -132,6 +132,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             // Secret management
             services.TryAddSingleton<ISecretManagerProvider, DefaultSecretManagerProvider>();
+            services.AddSingleton<ZipFileDownloadService>();
+            services.AddSingleton<SingleStreamerService>();
 
             // Shared memory data transfer
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

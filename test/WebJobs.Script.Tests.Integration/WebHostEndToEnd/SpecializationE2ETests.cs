@@ -299,7 +299,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             Assert.True(file.Exists, $"Expected PGO file '{file.FullName}' does not exist. The file was either renamed or deleted.");
 
-            JitTraceRuntime.Prepare(file, out int successfulPrepares, out int failedPrepares);
+            JitTraceRuntime.Prepare(file, null, out int successfulPrepares, out int failedPrepares);
 
             var failurePercentage = (double) failedPrepares / successfulPrepares * 100;
             
