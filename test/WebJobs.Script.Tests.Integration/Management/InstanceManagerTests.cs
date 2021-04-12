@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.WebJobs.Script.Tests;
 using Moq;
 using Moq.Protected;
@@ -50,9 +51,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             _scriptWebEnvironment = new ScriptWebHostEnvironment(_environment);
             _meshServiceClientMock = new Mock<IMeshServiceClient>(MockBehavior.Strict);
 
-            var bashCommandHandler = new BashCommandHandler(new MetricsLogger(), new Logger<BashCommandHandler>(_loggerFactory));
+            var metricsLogger = new MetricsLogger();
+            var bashCommandHandler = new BashCommandHandler(metricsLogger, new Logger<BashCommandHandler>(_loggerFactory));
+            var zipHandler = new ZipHandler(metricsLogger, NullLogger<ZipHandler>.Instance);
             _runFromPackageHandler = new RunFromPackageHandler(_environment, _httpClient, _meshServiceClientMock.Object,
-                bashCommandHandler, new MetricsLogger(), new Logger<RunFromPackageHandler>(_loggerFactory));
+                bashCommandHandler, zipHandler, metricsLogger, new Logger<RunFromPackageHandler>(_loggerFactory));
 
             _instanceManager = new InstanceManager(_optionsFactory, _httpClient, _scriptWebEnvironment, _environment,
                 _loggerFactory.CreateLogger<InstanceManager>(), new TestMetricsLogger(), _meshServiceClientMock.Object, _runFromPackageHandler);
@@ -111,6 +114,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             Assert.Collection(logs,
                 p => Assert.StartsWith("Starting Assignment", p),
                 p => Assert.StartsWith("Applying 1 app setting(s)", p),
+                p => Assert.Equal("AzureFilesConnectionString IsNullOrEmpty: True. AzureFilesContentShare: IsNullOrEmpty True", p),
                 p => Assert.StartsWith("Triggering specialization", p));
 
             // calling again should return false, since we have 
@@ -174,6 +178,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             Assert.Collection(logs,
                 p => Assert.StartsWith("Starting Assignment", p),
                 p => Assert.StartsWith("Applying 0 app setting(s)", p),
+                p => Assert.Equal("AzureFilesConnectionString IsNullOrEmpty: True. AzureFilesContentShare: IsNullOrEmpty True", p),
                 p => Assert.StartsWith("Triggering specialization", p));
         }
 

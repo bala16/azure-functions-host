@@ -289,17 +289,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var options = _optionsFactory.Create(ScriptApplicationHostOptionsSetup.SkipPlaceholder);
             RunFromPackageContext pkgContext = assignmentContext.GetRunFromPkgContext();
 
-            if (assignmentContext.IsWorkerRuntimePowerShell)
+            if (_environment.SupportsAzureFileShareMount())
             {
                 var azureFilesMounted = false;
-                if (assignmentContext.IsAzureFilesContentShareConfigured())
+                if (assignmentContext.IsAzureFilesContentShareConfigured(_logger))
                 {
                     azureFilesMounted = await _runFromPackageHandler.MountAzureFileShare(assignmentContext);
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        $"No {nameof(EnvironmentSettingNames.AzureFilesConnectionString)} or {nameof(EnvironmentSettingNames.AzureFilesContentShare)} configured");
+                    _logger.LogError(
+                        $"No {nameof(EnvironmentSettingNames.AzureFilesConnectionString)} or {nameof(EnvironmentSettingNames.AzureFilesContentShare)} configured. Azure FileShare will not be mounted");
                 }
 
                 if (await pkgContext.IsRunFromPackage(_logger))
@@ -325,7 +325,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 {
                     await _runFromPackageHandler.ApplyBlobPackageContext(pkgContext, options.ScriptPath, false);
                 }
-                else if (assignmentContext.IsAzureFilesContentShareConfigured())
+                else if (assignmentContext.IsAzureFilesContentShareConfigured(_logger))
                 {
                     await _runFromPackageHandler.MountAzureFileShare(assignmentContext);
                 }

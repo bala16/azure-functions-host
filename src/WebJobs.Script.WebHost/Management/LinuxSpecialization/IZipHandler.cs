@@ -3,8 +3,8 @@
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
 {
-    public interface IBashCommandHandler
+    public interface IZipHandler
     {
-        (string, string, int) RunBashCommand(string command, string metricName);
+        void UnzipPackage(string filePath, string scriptPath);
     }
 }

@@ -56,18 +56,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
                 ? Environment[EnvironmentSettingNames.AzureFilesContentShare]
                 : SiteName;
 
-        public string FunctionsWorkerRuntime =>
-            Environment.TryGetValue(EnvironmentSettingNames.FunctionWorkerRuntime,
-                out var runtime)
-                ? runtime
-                : string.Empty;
-
-        public bool IsWorkerRuntimePowerShell =>
-            string.Equals(FunctionsWorkerRuntime, RpcWorkerConstants.PowerShellLanguageWorkerName,
-                StringComparison.OrdinalIgnoreCase);
-
-        public bool IsAzureFilesContentShareConfigured()
+        public bool IsAzureFilesContentShareConfigured(ILogger logger)
         {
+            logger.LogDebug(
+                $"{nameof(EnvironmentSettingNames.AzureFilesConnectionString)} IsNullOrEmpty: {string.IsNullOrEmpty(AzureFilesConnectionString)}. {nameof(EnvironmentSettingNames.AzureFilesContentShare)}: IsNullOrEmpty {string.IsNullOrEmpty(AzureFilesContentShare)}");
             return !string.IsNullOrEmpty(AzureFilesConnectionString) && !string.IsNullOrEmpty(AzureFilesContentShare);
         }
 

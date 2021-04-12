@@ -66,15 +66,5 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
 
             return (string.Empty, string.Empty, -1);
         }
-
-        public void UnzipPackage(string filePath, string scriptPath)
-        {
-            using (_metricsLogger.LatencyEvent(MetricEventNames.LinuxContainerSpecializationZipExtract))
-            {
-                _logger.LogInformation($"Extracting files to '{scriptPath}'");
-                ZipFile.ExtractToDirectory(filePath, scriptPath, overwriteFiles: true);
-                _logger.LogInformation($"Zip extraction complete");
-            }
-        }
     }
 }

@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -18,21 +17,26 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
         public const int AriaDownloadThreshold = 100 * 1024 * 1024;
         public const string Aria2CExecutable = "aria2c";
         public const string UnsquashFSExecutable = "unsquashfs";
+        private const string SquashfsPrefix = "Squashfs";
+        private const string ZipPrefix = "Zip";
+        private static readonly string[] _knownPackageExtensions = { ".squashfs", ".sfs", ".sqsh", ".img", ".fs" };
 
         private readonly IEnvironment _environment;
         private readonly HttpClient _client;
         private readonly IMeshServiceClient _meshServiceClient;
         private readonly IBashCommandHandler _bashCommandHandler;
+        private readonly IZipHandler _zipHandler;
         private readonly IMetricsLogger _metricsLogger;
         private readonly ILogger<RunFromPackageHandler> _logger;
 
         public RunFromPackageHandler(IEnvironment environment, HttpClient client, IMeshServiceClient meshServiceClient,
-            IBashCommandHandler bashCommandHandler, IMetricsLogger metricsLogger, ILogger<RunFromPackageHandler> logger)
+            IBashCommandHandler bashCommandHandler, IZipHandler zipHandler, IMetricsLogger metricsLogger, ILogger<RunFromPackageHandler> logger)
         {
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _meshServiceClient = meshServiceClient ?? throw new ArgumentNullException(nameof(meshServiceClient));
             _bashCommandHandler = bashCommandHandler ?? throw new ArgumentNullException(nameof(bashCommandHandler));
+            _zipHandler = zipHandler;
             _metricsLogger = metricsLogger ?? throw new ArgumentNullException(nameof(metricsLogger));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -114,12 +118,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
                 {
                     if (useLocalSitePackages)
                     {
-                        _bashCommandHandler.UnzipPackage(filePath, localSitePackagesPath);
+                        _zipHandler.UnzipPackage(filePath, localSitePackagesPath);
                         await CreateBindMount(localSitePackagesPath, scriptPath);
                     }
                     else
                     {
-                        _bashCommandHandler.UnzipPackage(filePath, scriptPath);
+                        _zipHandler.UnzipPackage(filePath, scriptPath);
                     }
                 }
             }
@@ -135,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
 
             var uri = new Uri(pkgContext.Url);
             // check file name since it'll be faster than running `file`
-            if (FileIsAny(".squashfs", ".sfs", ".sqsh", ".img", ".fs"))
+            if (FileIsAny(_knownPackageExtensions))
             {
                 return CodePackageType.Squashfs;
             }
@@ -146,11 +150,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
 
             // Check file magic-number using `file` command.
             (var output, _, _) = _bashCommandHandler.RunBashCommand($"{BashCommandHandler.FileCommand} -b {filePath}", MetricEventNames.LinuxContainerSpecializationFileCommand);
-            if (output.StartsWith("Squashfs", StringComparison.OrdinalIgnoreCase))
+            if (output.StartsWith(SquashfsPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return CodePackageType.Squashfs;
             }
-            else if (output.StartsWith("Zip", StringComparison.OrdinalIgnoreCase))
+            else if (output.StartsWith(ZipPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return CodePackageType.Zip;
             }
@@ -168,7 +172,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
             var zipUri = new Uri(pkgContext.Url);
             if (!Utility.TryCleanUrl(zipUri.AbsoluteUri, out string cleanedUrl))
             {
-                throw new Exception("Invalid url for the package");
+                throw new InvalidOperationException("Invalid url for the package");
             }
 
             var tmpPath = Path.GetTempPath();
@@ -176,12 +180,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
             var filePath = Path.Combine(tmpPath, fileName);
             if (pkgContext.PackageContentLength != null && pkgContext.PackageContentLength > AriaDownloadThreshold)
             {
-                _logger.LogInformation($"Downloading zip contents from '{cleanedUrl}' using aria2c'");
+                _logger.LogDebug($"Downloading zip contents from '{cleanedUrl}' using aria2c'");
                 AriaDownload(tmpPath, fileName, zipUri, pkgContext.IsWarmUpRequest);
             }
             else
             {
-                _logger.LogInformation($"Downloading zip contents from '{cleanedUrl}' using httpclient'");
+                _logger.LogDebug($"Downloading zip contents from '{cleanedUrl}' using httpclient'");
                 await HttpClientDownload(filePath, zipUri, pkgContext.IsWarmUpRequest);
             }
 
@@ -263,12 +267,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization
         {
             try
             {
-                var targetPath = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHomePath);
-                _logger.LogDebug($"Mounting {EnvironmentSettingNames.AzureFilesContentShare} at {targetPath}");
-                bool succeeded = await _meshServiceClient.MountCifs(assignmentContext.AzureFilesConnectionString,
-                    assignmentContext.AzureFilesContentShare, targetPath);
-                _logger.LogInformation($"Mounted {EnvironmentSettingNames.AzureFilesContentShare} at {targetPath} Success = {succeeded}");
-                return succeeded;
+                using (_metricsLogger.LatencyEvent(MetricEventNames.LinuxContainerSpecializationMountCifs))
+                {
+                    var targetPath = _environment.GetEnvironmentVariable(EnvironmentSettingNames.AzureWebsiteHomePath);
+                    _logger.LogDebug($"Mounting {EnvironmentSettingNames.AzureFilesContentShare} at {targetPath}");
+                    bool succeeded = await _meshServiceClient.MountCifs(assignmentContext.AzureFilesConnectionString,
+                        assignmentContext.AzureFilesContentShare, targetPath);
+                    _logger.LogInformation($"Mounted {EnvironmentSettingNames.AzureFilesContentShare} at {targetPath} Success = {succeeded}");
+                    return succeeded;
+                }
             }
             catch (Exception e)
             {

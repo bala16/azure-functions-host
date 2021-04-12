@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Azure.WebJobs.Script.WebHost.Models;
-using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
@@ -56,46 +56,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
         }
 
         [Theory]
-        [InlineData(RpcWorkerConstants.PowerShellLanguageWorkerName, RpcWorkerConstants.PowerShellLanguageWorkerName)]
-        [InlineData(RpcWorkerConstants.DotNetLanguageWorkerName, RpcWorkerConstants.DotNetLanguageWorkerName)]
-        [InlineData(RpcWorkerConstants.PythonLanguageWorkerName, RpcWorkerConstants.PythonLanguageWorkerName)]
-        [InlineData(RpcWorkerConstants.JavaLanguageWorkerName, RpcWorkerConstants.JavaLanguageWorkerName)]
-        [InlineData(RpcWorkerConstants.NodeLanguageWorkerName, RpcWorkerConstants.NodeLanguageWorkerName)]
-        [InlineData(null, null)]
-        [InlineData("", "")]
-        public void Returns_WorkerRuntime(string workerRuntime, string expectedWorkerRuntime)
-        {
-            var hostAssignmentContext = new HostAssignmentContext()
-            {
-                Environment = new Dictionary<string, string>()
-            };
-
-            hostAssignmentContext.Environment[EnvironmentSettingNames.FunctionWorkerRuntime] = workerRuntime;
-
-            Assert.Equal(expectedWorkerRuntime, hostAssignmentContext.FunctionsWorkerRuntime);
-        }
-
-        [Theory]
-        [InlineData(RpcWorkerConstants.PowerShellLanguageWorkerName, true)]
-        [InlineData(RpcWorkerConstants.DotNetLanguageWorkerName, false)]
-        [InlineData(RpcWorkerConstants.PythonLanguageWorkerName, false)]
-        [InlineData(RpcWorkerConstants.JavaLanguageWorkerName, false)]
-        [InlineData(RpcWorkerConstants.NodeLanguageWorkerName, false)]
-        [InlineData(null, false)]
-        [InlineData("", false)]
-        public void Returns_Is_WorkerRuntime_PowerShell(string workerRuntime, bool isPowerShellWorkerRuntime)
-        {
-            var hostAssignmentContext = new HostAssignmentContext()
-            {
-                Environment = new Dictionary<string, string>()
-            };
-
-            hostAssignmentContext.Environment[EnvironmentSettingNames.FunctionWorkerRuntime] = workerRuntime;
-
-            Assert.Equal(isPowerShellWorkerRuntime, hostAssignmentContext.IsWorkerRuntimePowerShell);
-        }
-
-        [Theory]
         [InlineData("", "",  false)]
         [InlineData("cs", "share",  true)]
         [InlineData("cs", "",  false)]
@@ -113,7 +73,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Managment
             hostAssignmentContext.Environment[EnvironmentSettingNames.AzureFilesConnectionString] = connectionString;
             hostAssignmentContext.Environment[EnvironmentSettingNames.AzureFilesContentShare] = contentShare;
 
-            Assert.Equal(isAzureFilesConfigured, hostAssignmentContext.IsAzureFilesContentShareConfigured());
+            Assert.Equal(isAzureFilesConfigured, hostAssignmentContext.IsAzureFilesContentShareConfigured(NullLogger.Instance));
         }
     }
 }

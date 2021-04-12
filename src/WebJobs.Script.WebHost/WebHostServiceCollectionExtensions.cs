@@ -270,6 +270,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             });
 
             services.AddSingleton<IRunFromPackageHandler, RunFromPackageHandler>();
+            services.AddSingleton<IZipHandler, ZipHandler>();
             services.AddSingleton<IBashCommandHandler, BashCommandHandler>();
         }
 
