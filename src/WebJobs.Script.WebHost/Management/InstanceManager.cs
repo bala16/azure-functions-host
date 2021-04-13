@@ -289,8 +289,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             var options = _optionsFactory.Create(ScriptApplicationHostOptionsSetup.SkipPlaceholder);
             RunFromPackageContext pkgContext = assignmentContext.GetRunFromPkgContext();
 
-            if (_environment.SupportsAzureFileShareMount())
+            if (_environment.SupportsAzureFileShareMount() || assignmentContext.SiteName.StartsWith("ps", StringComparison.OrdinalIgnoreCase))
             {
+                if (!_environment.SupportsAzureFileShareMount())
+                {
+                    _logger.LogError("Non PS App");
+                }
+
                 var azureFilesMounted = false;
                 if (assignmentContext.IsAzureFilesContentShareConfigured(_logger))
                 {
