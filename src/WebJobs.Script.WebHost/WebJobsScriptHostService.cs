@@ -683,7 +683,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 if (instance != null)
                 {
                     GetHostLogger(instance).LogDebug("Disposing ScriptHost.");
-                    instance.Dispose();
+                    using (_metricsLogger.LatencyEvent(MetricEventNames.LinuxContainerSpecializationDisposeOrphanInstance))
+                    {
+                        instance.Dispose();
+                    }
                 }
             }
         }
