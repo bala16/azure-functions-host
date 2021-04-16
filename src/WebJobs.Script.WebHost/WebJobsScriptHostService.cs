@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Script.Configuration;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics.Extensions;
+using Microsoft.Azure.WebJobs.Script.WebHost.Helpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -37,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         private readonly HostPerformanceManager _performanceManager;
         private readonly IOptions<HostHealthMonitorOptions> _healthMonitorOptions;
         private readonly IConfiguration _config;
+        private readonly ScheduledDisposer _scheduledDisposer;
         private readonly SlidingWindow<bool> _healthCheckWindow;
         private readonly Timer _hostHealthCheckTimer;
         private readonly SemaphoreSlim _hostStartSemaphore = new SemaphoreSlim(1, 1);
@@ -57,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         public WebJobsScriptHostService(IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IScriptHostBuilder scriptHostBuilder, ILoggerFactory loggerFactory,
             IScriptWebHostEnvironment scriptWebHostEnvironment, IEnvironment environment,
             HostPerformanceManager hostPerformanceManager, IOptions<HostHealthMonitorOptions> healthMonitorOptions,
-            IMetricsLogger metricsLogger, IApplicationLifetime applicationLifetime, IConfiguration config)
+            IMetricsLogger metricsLogger, IApplicationLifetime applicationLifetime, IConfiguration config, ScheduledDisposer scheduledDisposer)
         {
             if (loggerFactory == null)
             {
@@ -79,6 +81,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             _healthMonitorOptions = healthMonitorOptions ?? throw new ArgumentNullException(nameof(healthMonitorOptions));
             _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _scheduledDisposer = scheduledDisposer ?? throw new ArgumentNullException(nameof(scheduledDisposer));
 
             _hostStarted = _hostStartedSource.Task;
 
@@ -685,7 +688,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     GetHostLogger(instance).LogDebug("Disposing ScriptHost.");
                     using (_metricsLogger.LatencyEvent(MetricEventNames.LinuxContainerSpecializationDisposeOrphanInstance))
                     {
-                        instance.Dispose();
+                        if (!_scheduledDisposer.TryDisposeWithDelay(instance))
+                        {
+                            _logger.LogDebug("Failed to schedule dispose. Disposing host on current thread.");
+                            instance.Dispose();
+                        }
                     }
                 }
             }

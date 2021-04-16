@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.ContainerManagement;
 using Microsoft.Azure.WebJobs.Script.WebHost.DependencyInjection;
 using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Filters;
+using Microsoft.Azure.WebJobs.Script.WebHost.Helpers;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management.LinuxSpecialization;
 using Microsoft.Azure.WebJobs.Script.WebHost.Metrics;
@@ -127,6 +128,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             services.AddSingleton<IFileSystem>(_ => FileUtility.Instance);
             services.AddTransient<VirtualFileSystem>();
             services.AddTransient<VirtualFileSystemMiddleware>();
+            services.TryAddSingleton<ScheduledDisposer>();
 
             // Logging and diagnostics
             services.AddSingleton<IMetricsLogger, WebHostMetricsLogger>();
