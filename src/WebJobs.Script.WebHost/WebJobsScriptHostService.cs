@@ -686,8 +686,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 if (instance != null)
                 {
                     GetHostLogger(instance).LogDebug("Disposing ScriptHost.");
-                    var disposeScheduled = _scheduledDisposer.ScheduleDispose(instance);
-                    GetHostLogger(instance).LogDebug($"ScriptHost Dispose schedule result = {disposeScheduled}");
+                    Utility.ExecuteAfterColdStartDelay(_environment, () =>
+                    {
+                        try
+                        {
+                            _logger.LogDebug("Starting instance dispose");
+                            instance.Dispose();
+                            _logger.LogDebug("Completed instance dispose");
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Failed to dispose orphaned Host instance");
+                        }
+                    }, cancellationToken);
+
+                    GetHostLogger(instance).LogDebug("ScriptHost marked for disposal");
                 }
             }
         }
