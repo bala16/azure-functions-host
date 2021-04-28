@@ -1,6 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -90,6 +93,62 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/list")]
+        public string ListFiles([FromQuery] string path)
+        {
+            _logger.LogInformation($"Listing {path}");
+            var stringBuilder = new StringBuilder();
+            foreach (var f in Directory.EnumerateFileSystemEntries($"/{path}"))
+            {
+                stringBuilder.AppendLine(f);
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/add-dir")]
+        public string AddDirectory([FromQuery] string path, [FromQuery] string dirName)
+        {
+            var stringBuilder = new StringBuilder();
+            var finalPath = $"/{path}/{dirName}";
+            stringBuilder.AppendLine($"Creating dir {finalPath}");
+
+            try
+            {
+                Directory.CreateDirectory(finalPath);
+                stringBuilder.AppendLine("OK");
+            }
+            catch (Exception e)
+            {
+                stringBuilder.AppendLine(e.ToString());
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/add-file")]
+        public string AddFile([FromQuery] string path, [FromQuery] string fileName)
+        {
+            var stringBuilder = new StringBuilder();
+            var finalPath = $"/{path}/{fileName}";
+            stringBuilder.AppendLine($"Creating file at {finalPath}");
+
+            try
+            {
+                System.IO.File.WriteAllText(finalPath, "AddFile");
+                stringBuilder.AppendLine("OK");
+            }
+            catch (Exception e)
+            {
+                stringBuilder.AppendLine(e.ToString());
+            }
+
+            return stringBuilder.ToString();
         }
     }
 }
