@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Host.Timers;
 using Microsoft.Azure.WebJobs.Script.ChangeAnalysis;
 using Microsoft.Azure.WebJobs.Script.Configuration;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.Host;
 using Microsoft.Azure.WebJobs.Script.Middleware;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Azure.WebJobs.Script.WebHost.Configuration;
@@ -29,7 +30,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
     public static class WebScriptHostBuilderExtension
     {
         public static IHostBuilder AddWebScriptHost(this IHostBuilder builder, IServiceProvider rootServiceProvider,
-           IServiceScopeFactory rootScopeFactory, ScriptApplicationHostOptions webHostOptions, Action<IWebJobsBuilder> configureWebJobs = null)
+           IServiceScopeFactory rootScopeFactory, ScriptApplicationHostOptions webHostOptions, StandbyOptions standbyOptions, Action<IWebJobsBuilder> configureWebJobs = null)
         {
             ILoggerFactory configLoggerFactory = rootServiceProvider.GetService<ILoggerFactory>();
             IDependencyValidator validator = rootServiceProvider.GetService<IDependencyValidator>();
@@ -133,6 +134,9 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     // Hosted services
                     services.AddSingleton<IFileMonitoringService, FileMonitoringService>();
                     services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, IFileMonitoringService>(p => p.GetService<IFileMonitoringService>()));
+
+                    // Record Standby state when the Host was created
+                    services.AddSingleton(new ScriptHostStandbyStateProvider(standbyOptions.InStandbyMode));
 
                     ConfigureRegisteredBuilders(services, rootServiceProvider);
                 });

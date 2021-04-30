@@ -366,7 +366,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             public PausingScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> options, IServiceProvider root, IServiceScopeFactory scope)
             {
-                _inner = new DefaultScriptHostBuilder(options, root, scope);
+                _inner = new DefaultScriptHostBuilder(options, root, scope, new TestOptionsMonitor<StandbyOptions>(new StandbyOptions()));
                 _options = options;
             }
 

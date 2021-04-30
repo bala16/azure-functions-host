@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.Host;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.WebHost.DependencyInjection;
@@ -349,6 +350,76 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             await startTask;
             Assert.True(AreRequiredMetricsGenerated(metricsLogger));
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DelaysHostDispose_ForStandbyHost(bool isStandbyHost)
+        {
+            var metricsLogger = new TestMetricsLogger();
+
+            var services = new ServiceCollection()
+                .AddLogging(l =>
+                {
+                    l.Services.AddSingleton<ILoggerProvider, TestLoggerProvider>();
+                    l.AddFilter(_ => true);
+                })
+                .AddSingleton(new ScriptHostStandbyStateProvider(isStandbyHost))
+                .BuildServiceProvider();
+
+            var host = new Mock<IHost>();
+
+            host.Setup(h => h.Services)
+                .Returns(services);
+
+            host.Setup(h => h.Dispose())
+                .Callback(() =>
+                {
+                    services.Dispose();
+                });
+
+            var hostBuilder = new Mock<IScriptHostBuilder>();
+            hostBuilder.Setup(b => b.BuildHost(It.IsAny<bool>(), It.IsAny<bool>()))
+                .Returns(host.Object);
+
+            _webHostLoggerProvider = new TestLoggerProvider();
+            _loggerFactory = new LoggerFactory();
+            _loggerFactory.AddProvider(_webHostLoggerProvider);
+
+            _hostService = new WebJobsScriptHostService(
+                _monitor, hostBuilder.Object, _loggerFactory,
+                _mockScriptWebHostEnvironment.Object, _mockEnvironment.Object,
+                _hostPerformanceManager, _healthMonitorOptions,
+                metricsLogger, new Mock<IApplicationLifetime>().Object,
+                _mockConfig);
+
+            var hostLogger = host.Object.GetTestLoggerProvider();
+
+            await _hostService.StartAsync(CancellationToken.None);
+            await _hostService.RestartHostAsync(CancellationToken.None);
+
+            Assert.True(AreRequiredMetricsGenerated(metricsLogger));
+
+            host.Verify(m => m.StopAsync(It.IsAny<CancellationToken>()), Times.Exactly(1));
+            host.Verify(m => m.Dispose(), Times.Exactly(1));
+
+            var allLogMessages = _webHostLoggerProvider.GetAllLogMessages();
+
+            if (isStandbyHost)
+            {
+                Assert.Contains(allLogMessages,
+                    m => m.FormattedMessage != null &&
+                         m.FormattedMessage.Contains("ScriptHost marked for disposal"));
+            }
+            else
+            {
+                Assert.DoesNotContain(allLogMessages,
+                    m => m.FormattedMessage != null &&
+                         m.FormattedMessage.Contains("ScriptHost marked for disposal"));
+            }
+
+            Assert.Equal(ScriptHostState.Running, _hostService.State);
         }
 
         [Fact]

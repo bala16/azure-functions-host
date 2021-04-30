@@ -177,7 +177,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
 
             public TestScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> appHostOptions, IServiceProvider rootServiceProvider, IServiceScopeFactory rootServiceScopeFactory)
             {
-                _builder = new DefaultScriptHostBuilder(appHostOptions, rootServiceProvider, rootServiceScopeFactory);
+                _builder = new DefaultScriptHostBuilder(appHostOptions, rootServiceProvider, rootServiceScopeFactory, new TestOptionsMonitor<StandbyOptions>(new StandbyOptions()));
             }
 
             public IHost BuildHost(bool skipHostStartup, bool skipHostConfigurationParsing)

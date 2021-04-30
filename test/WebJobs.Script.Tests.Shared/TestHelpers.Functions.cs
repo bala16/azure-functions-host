@@ -24,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
     // not have a direct dependency on anything WebJobs related.
     public static partial class TestHelpers
     {
-        public static IHost GetDefaultHost(Action<ScriptApplicationHostOptions> configure = null)
+        public static IHost GetDefaultHost(Action<ScriptApplicationHostOptions> configure = null, StandbyOptions standbyOptions = null)
         {
             if (configure == null)
             {
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             }
 
             return new HostBuilder()
-                .ConfigureDefaultTestWebScriptHost(configure)
+                .ConfigureDefaultTestWebScriptHost(configure, standbyOptions: standbyOptions)
                 .Build();
         }
 

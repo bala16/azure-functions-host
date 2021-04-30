@@ -27,13 +27,13 @@ namespace Microsoft.WebJobs.Script.Tests
 {
     public static class TestHostBuilderExtensions
     {
-        public static IHostBuilder ConfigureDefaultTestWebScriptHost(this IHostBuilder builder, Action<ScriptApplicationHostOptions> configure = null, bool runStartupHostedServices = false)
+        public static IHostBuilder ConfigureDefaultTestWebScriptHost(this IHostBuilder builder, Action<ScriptApplicationHostOptions> configure = null, bool runStartupHostedServices = false, StandbyOptions standbyOptions = null)
         {
-            return builder.ConfigureDefaultTestWebScriptHost(null, configure, runStartupHostedServices);
+            return builder.ConfigureDefaultTestWebScriptHost(null, configure, runStartupHostedServices, standbyOptions: standbyOptions ?? new StandbyOptions());
         }
 
         public static IHostBuilder ConfigureDefaultTestWebScriptHost(this IHostBuilder builder, Action<IWebJobsBuilder> configureWebJobs,
-            Action<ScriptApplicationHostOptions> configure = null, bool runStartupHostedServices = false, Action<IServiceCollection> configureRootServices = null)
+            Action<ScriptApplicationHostOptions> configure = null, bool runStartupHostedServices = false, Action<IServiceCollection> configureRootServices = null, StandbyOptions standbyOptions = null)
         {
             var webHostOptions = new ScriptApplicationHostOptions()
             {
@@ -65,7 +65,7 @@ namespace Microsoft.WebJobs.Script.Tests
             var rootProvider = new WebHostServiceProvider(services);
 
             builder
-                .AddWebScriptHost(rootProvider, rootProvider, webHostOptions, configureWebJobs)
+                .AddWebScriptHost(rootProvider, rootProvider, webHostOptions, standbyOptions ?? new StandbyOptions(), configureWebJobs)
                 .ConfigureAppConfiguration(c =>
                 {
                     c.AddTestSettings();

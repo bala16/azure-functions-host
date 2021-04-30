@@ -40,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Controllers
             _testHost = new TestFunctionHost(testScriptPath, testLogPath,
             configureWebHostServices: services =>
             {
+                services.AddSingleton(new TestOptionsMonitor<StandbyOptions>(new StandbyOptions()));
                 services.AddSingleton<IScriptHostBuilder, PausingScriptHostBuilder>();
                 services.AddSingleton<IEnvironment>(testEnvironment);
                 services.AddSingleton<IConfigureBuilder<IWebJobsBuilder>>(new DelegatedConfigureBuilder<IWebJobsBuilder>(b =>
@@ -70,12 +71,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Controllers
         private class PausingScriptHostBuilder : IScriptHostBuilder
         {
             private readonly DefaultScriptHostBuilder _inner;
-            private readonly IOptionsMonitor<ScriptApplicationHostOptions> _options;
 
-            public PausingScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> options, IServiceProvider root, IServiceScopeFactory scope)
+            public PausingScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> options, IServiceProvider root, IServiceScopeFactory scope, IOptionsMonitor<StandbyOptions> standbyOptions)
             {
-                _inner = new DefaultScriptHostBuilder(options, root, scope);
-                _options = options;
+                _inner = new DefaultScriptHostBuilder(options, root, scope, standbyOptions);
             }
 
             public IHost BuildHost(bool skipHostStartup, bool skipHostConfigurationParsing)
