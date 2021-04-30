@@ -129,7 +129,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             services.AddTransient<VirtualFileSystem>();
             services.AddTransient<VirtualFileSystemMiddleware>();
             services.TryAddSingleton<SemaphoreHelper>();
-            services.TryAddSingleton<IScheduledDisposer, ScheduledDisposer>();
 
             // Logging and diagnostics
             services.AddSingleton<IMetricsLogger, WebHostMetricsLogger>();

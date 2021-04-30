@@ -17,6 +17,8 @@ using Microsoft.Azure.WebJobs.Script.Configuration;
 using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.Eventing;
+using Microsoft.Azure.WebJobs.Script.Host;
+using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -1397,6 +1399,21 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             Assert.Equal(string.Format($"The function or proxy name '{name}' must be unique within the function app.", name), ex.Message);
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Returns_HostStandbyStatus(bool isStandbyMode)
+        {
+            var host = TestHelpers.GetDefaultHost(o =>
+            {
+                o.ScriptPath = TestHelpers.FunctionsTestDirectory;
+                o.LogPath = TestHelpers.GetHostLogFileDirectory().FullName;
+            }, new StandbyOptions() { InStandbyMode = isStandbyMode });
+
+            var scriptHostStandbyStateProvider = host.Services.GetService<IScriptHostStandbyStateProvider>();
+            Assert.Equal(isStandbyMode, scriptHostStandbyStateProvider.IsStandbyScriptHost);
+        }
+
         [Fact]
         public async Task IsFunction_ReturnsExpectedResult()
         {
@@ -1522,7 +1539,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     {
                         o.ScriptPath = TestHelpers.FunctionsTestDirectory;
                         o.LogPath = TestHelpers.GetHostLogFileDirectory().FullName;
-                    })
+                    }, standbyOptions: new StandbyOptions())
                     .Build();
 
                 await ScriptHost.InitializeAsync();

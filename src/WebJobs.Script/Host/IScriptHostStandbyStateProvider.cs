@@ -1,12 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System;
-
-namespace Microsoft.Azure.WebJobs.Script.WebHost.Helpers
+namespace Microsoft.Azure.WebJobs.Script.Host
 {
-    public interface IScheduledDisposer
+    public interface IScriptHostStandbyStateProvider
     {
-        bool ScheduleDispose(IDisposable disposable);
+        bool IsStandbyScriptHost { get; }
     }
 }

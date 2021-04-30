@@ -334,7 +334,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Host
                           return builder.BuildHost(skipHostStartup, skipHostConfigurationParsing);
                       }
 
-                      return new InterceptingScriptHostBuilder(appHostOptions, s, rootServiceScopeFactory, Intercept);
+                      return new InterceptingScriptHostBuilder(appHostOptions, s, rootServiceScopeFactory, Intercept, new TestOptionsMonitor<StandbyOptions>(new StandbyOptions()));
                   });
               }))
             {
@@ -361,9 +361,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Integration.Host
             private readonly Func<IScriptHostBuilder, bool, bool, IHost> _interceptCallback;
 
             public InterceptingScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> appHostOptions, IServiceProvider rootServiceProvider,
-                IServiceScopeFactory rootServiceScopeFactory, Func<IScriptHostBuilder, bool, bool, IHost> interceptCallback)
+                IServiceScopeFactory rootServiceScopeFactory, Func<IScriptHostBuilder, bool, bool, IHost> interceptCallback, IOptionsMonitor<StandbyOptions> standbyOptions)
             {
-                _builder = new DefaultScriptHostBuilder(appHostOptions, rootServiceProvider, rootServiceScopeFactory);
+                _builder = new DefaultScriptHostBuilder(appHostOptions, rootServiceProvider, rootServiceScopeFactory, standbyOptions);
                 _interceptCallback = interceptCallback;
             }
 

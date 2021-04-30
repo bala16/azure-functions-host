@@ -14,6 +14,7 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.Configuration;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.Host;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics.Extensions;
 using Microsoft.Azure.WebJobs.Script.WebHost.Helpers;
@@ -38,7 +39,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         private readonly HostPerformanceManager _performanceManager;
         private readonly IOptions<HostHealthMonitorOptions> _healthMonitorOptions;
         private readonly IConfiguration _config;
-        private readonly IScheduledDisposer _scheduledDisposer;
         private readonly SlidingWindow<bool> _healthCheckWindow;
         private readonly Timer _hostHealthCheckTimer;
         private readonly SemaphoreSlim _hostStartSemaphore = new SemaphoreSlim(1, 1);
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         public WebJobsScriptHostService(IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IScriptHostBuilder scriptHostBuilder, ILoggerFactory loggerFactory,
             IScriptWebHostEnvironment scriptWebHostEnvironment, IEnvironment environment,
             HostPerformanceManager hostPerformanceManager, IOptions<HostHealthMonitorOptions> healthMonitorOptions,
-            IMetricsLogger metricsLogger, IApplicationLifetime applicationLifetime, IConfiguration config, IScheduledDisposer scheduledDisposer)
+            IMetricsLogger metricsLogger, IApplicationLifetime applicationLifetime, IConfiguration config)
         {
             if (loggerFactory == null)
             {
@@ -81,7 +81,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             _healthMonitorOptions = healthMonitorOptions ?? throw new ArgumentNullException(nameof(healthMonitorOptions));
             _logger = loggerFactory.CreateLogger(ScriptConstants.LogCategoryHostGeneral);
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            _scheduledDisposer = scheduledDisposer ?? throw new ArgumentNullException(nameof(scheduledDisposer));
 
             _hostStarted = _hostStartedSource.Task;
 
@@ -658,6 +657,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         /// <param name="instance">The <see cref="IHost"/> instance to remove</param>
         private async Task Orphan(IHost instance, CancellationToken cancellationToken = default)
         {
+            var isStandbyHost = false;
             try
             {
                 var scriptHost = (ScriptHost)instance?.Services.GetService<ScriptHost>();
@@ -665,6 +665,12 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 {
                     scriptHost.HostInitializing -= OnHostInitializing;
                     scriptHost.HostInitialized -= OnHostInitialized;
+                }
+
+                var hostStandbyStateProvider = instance?.Services.GetService<IScriptHostStandbyStateProvider>();
+                if (hostStandbyStateProvider != null)
+                {
+                    isStandbyHost = hostStandbyStateProvider.IsStandbyScriptHost;
                 }
             }
             catch (ObjectDisposedException)
@@ -686,21 +692,31 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 if (instance != null)
                 {
                     GetHostLogger(instance).LogDebug("Disposing ScriptHost.");
-                    Utility.ExecuteAfterColdStartDelay(_environment, () =>
-                    {
-                        try
-                        {
-                            _logger.LogDebug("Starting instance dispose");
-                            instance.Dispose();
-                            _logger.LogDebug("Completed instance dispose");
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError(e, "Failed to dispose orphaned Host instance");
-                        }
-                    }, cancellationToken);
 
-                    GetHostLogger(instance).LogDebug("ScriptHost marked for disposal");
+                    if (isStandbyHost && !_scriptWebHostEnvironment.InStandbyMode)
+                    {
+                        // For cold start reasons delay disposing script host if specializing out of placeholder mode
+                        Utility.ExecuteAfterColdStartDelay(_environment, () =>
+                        {
+                            try
+                            {
+                                _logger.LogDebug("Starting ScripHost dispose");
+                                instance.Dispose();
+                                _logger.LogDebug("ScriptHost disposed");
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError(e, "Failed to dispose ScriptHost instance");
+                            }
+                        }, cancellationToken);
+
+                        GetHostLogger(instance).LogDebug("ScriptHost marked for disposal");
+                    }
+                    else
+                    {
+                        instance.Dispose();
+                        GetHostLogger(instance).LogDebug("ScriptHost disposed");
+                    }
                 }
             }
         }

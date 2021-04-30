@@ -15,12 +15,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         private readonly IOptionsMonitor<ScriptApplicationHostOptions> _applicationHostOptions;
         private readonly IServiceProvider _rootServiceProvider;
         private readonly IServiceScopeFactory _rootScopeFactory;
+        private readonly IOptionsMonitor<StandbyOptions> _standbyOptions;
 
-        public DefaultScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IServiceProvider rootServiceProvider, IServiceScopeFactory rootScopeFactory)
+        public DefaultScriptHostBuilder(IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IServiceProvider rootServiceProvider, IServiceScopeFactory rootScopeFactory, IOptionsMonitor<StandbyOptions> standbyOptions)
         {
             _applicationHostOptions = applicationHostOptions ?? throw new ArgumentNullException(nameof(applicationHostOptions));
             _rootServiceProvider = rootServiceProvider ?? throw new ArgumentNullException(nameof(rootServiceProvider));
             _rootScopeFactory = rootScopeFactory ?? throw new ArgumentNullException(nameof(rootScopeFactory));
+            _standbyOptions = standbyOptions ?? throw new ArgumentNullException(nameof(standbyOptions));
         }
 
         public IHost BuildHost(bool skipHostStartup, bool skipHostConfigurationParsing)
@@ -41,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
 
             builder.SetAzureFunctionsEnvironment()
-                .AddWebScriptHost(_rootServiceProvider, _rootScopeFactory, _applicationHostOptions.CurrentValue);
+                .AddWebScriptHost(_rootServiceProvider, _rootScopeFactory, _applicationHostOptions.CurrentValue, _standbyOptions.CurrentValue);
 
             if (skipHostStartup)
             {
