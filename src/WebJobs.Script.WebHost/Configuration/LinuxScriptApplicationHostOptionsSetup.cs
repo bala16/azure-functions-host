@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 using Microsoft.Extensions.Options;
 using static Microsoft.Azure.WebJobs.Script.EnvironmentSettingNames;
 
@@ -41,7 +42,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
             // If SCM_RUN_FROM_PACKAGE is set to a valid value and the blob exists, it's a zip deployment.
             // We need to explicitly check if the blob exists because on Linux Consumption the app setting is always added, regardless if it's used or not.
             var url = _environment.GetEnvironmentVariable(ScmRunFromPackage);
-            bool scmRunFromPkgConfigured = Utility.IsValidZipSetting(url) && BlobExists(url);
+            if (string.IsNullOrEmpty(url))
+            {
+                LinuxContainerEventGenerator.LogInfo("Url was empty");
+            }
+            else
+            {
+                LinuxContainerEventGenerator.LogInfo($"url = {url.Substring(0, 25)}");
+            }
+
+            var isValidZipSetting = Utility.IsValidZipSetting(url);
+            LinuxContainerEventGenerator.LogInfo($"isValidZipSetting = {isValidZipSetting}");
+
+            var blobExists = BlobExists(url);
+            LinuxContainerEventGenerator.LogInfo($"blobExists = {blobExists}");
+
+            bool scmRunFromPkgConfigured = isValidZipSetting && blobExists;
             options.IsScmRunFromPackage = scmRunFromPkgConfigured;
 
             return scmRunFromPkgConfigured;
@@ -51,6 +67,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
         {
             if (string.IsNullOrEmpty(url))
             {
+                LinuxContainerEventGenerator.LogInfo($"BlobExists url was empty");
                 return false;
             }
 
@@ -67,6 +84,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
                     }
                     catch (Exception ex) when (!ex.IsFatal())
                     {
+                        LinuxContainerEventGenerator.LogInfo(ex.ToString());
                         if (++attempt > 2)
                         {
                             return false;
@@ -77,6 +95,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Configuration
             }
             catch (Exception)
             {
+                LinuxContainerEventGenerator.LogInfo("BlobExists failed after retry");
                 return false;
             }
         }

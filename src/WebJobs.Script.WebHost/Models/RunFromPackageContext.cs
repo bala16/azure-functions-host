@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
@@ -37,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
         private bool ScmRunFromPackageBlobExists(ScriptApplicationHostOptions options, ILogger logger)
         {
             var blobExists = options.IsScmRunFromPackage;
+            LinuxContainerEventGenerator.LogInfo($"{nameof(ScmRunFromPackageBlobExists)} blobExists = {blobExists}");
             logger.LogDebug($"{EnvironmentSettingNames.ScmRunFromPackage} points to an existing blob: {blobExists}");
             return blobExists;
         }

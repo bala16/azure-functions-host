@@ -116,5 +116,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
                 SystemEnvironment.Instance.GetSlotName() ?? string.Empty,
                 DateTime.UtcNow);
         }
+
+        public static void LogInfo(string message)
+        {
+            var linuxContainerEventGenerator = new LinuxContainerEventGenerator(SystemEnvironment.Instance);
+            linuxContainerEventGenerator.LogFunctionTraceEvent(LogLevel.Error,
+                SystemEnvironment.Instance.GetSubscriptionId() ?? string.Empty,
+                SystemEnvironment.Instance.GetAzureWebsiteUniqueSlotName() ?? string.Empty, string.Empty, string.Empty,
+                nameof(LogInfo), string.Empty, message, string.Empty,
+                string.Empty, string.Empty, string.Empty, string.Empty,
+                SystemEnvironment.Instance.GetRuntimeSiteName() ?? string.Empty,
+                SystemEnvironment.Instance.GetSlotName() ?? string.Empty,
+                DateTime.UtcNow);
+        }
     }
 }
