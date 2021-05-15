@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.Configuration
 {
-    internal class ScriptHostOptionsSetup : IConfigureOptions<ScriptJobHostOptions>
+    internal class ScriptJobHostOptionsSetup : IConfigureOptions<ScriptJobHostOptions>
     {
         private readonly IConfiguration _configuration;
         private readonly IEnvironment _environment;
@@ -18,7 +18,7 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
         internal static readonly TimeSpan MaxFunctionTimeoutDynamic = TimeSpan.FromMinutes(10);
         internal static readonly TimeSpan DefaultFunctionTimeout = TimeSpan.FromMinutes(30);
 
-        public ScriptHostOptionsSetup(IConfiguration configuration, IEnvironment environment, IOptions<ScriptApplicationHostOptions> applicationHostOptions)
+        public ScriptJobHostOptionsSetup(IConfiguration configuration, IEnvironment environment, IOptions<ScriptApplicationHostOptions> applicationHostOptions)
         {
             _configuration = configuration;
             _environment = environment;
@@ -70,6 +70,7 @@ namespace Microsoft.Azure.WebJobs.Script.Configuration
             options.RootLogPath = webHostOptions.LogPath;
             options.IsSelfHost = webHostOptions.IsSelfHost;
             options.TestDataPath = webHostOptions.TestDataPath;
+            options.IsStandbyConfiguration = webHostOptions.IsStandbyConfiguration;
         }
 
         private void ConfigureFunctionTimeout(ScriptJobHostOptions options)

@@ -655,6 +655,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         /// <param name="instance">The <see cref="IHost"/> instance to remove</param>
         private async Task Orphan(IHost instance, CancellationToken cancellationToken = default)
         {
+            var isStandbyHost = false;
             try
             {
                 var scriptHost = (ScriptHost)instance?.Services.GetService<ScriptHost>();
@@ -662,6 +663,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 {
                     scriptHost.HostInitializing -= OnHostInitializing;
                     scriptHost.HostInitialized -= OnHostInitialized;
+                    isStandbyHost = scriptHost.IsStandbyHost;
                 }
             }
             catch (ObjectDisposedException)
@@ -683,7 +685,31 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 if (instance != null)
                 {
                     GetHostLogger(instance).LogDebug("Disposing ScriptHost.");
-                    instance.Dispose();
+
+                    if (isStandbyHost && !_scriptWebHostEnvironment.InStandbyMode)
+                    {
+                        // For cold start reasons delay disposing script host if specializing out of placeholder mode
+                        Utility.ExecuteAfterColdStartDelay(_environment, () =>
+                        {
+                            try
+                            {
+                                GetHostLogger(instance).LogDebug("Starting Standby ScriptHost dispose");
+                                instance.Dispose();
+                                _logger.LogDebug("Standby ScriptHost disposed");
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError(e, "Failed to dispose Standby ScriptHost instance");
+                            }
+                        }, cancellationToken);
+
+                        GetHostLogger(instance).LogDebug("Standby ScriptHost marked for disposal");
+                    }
+                    else
+                    {
+                        instance.Dispose();
+                        GetHostLogger(instance).LogDebug("ScriptHost disposed");
+                    }
                 }
             }
         }
