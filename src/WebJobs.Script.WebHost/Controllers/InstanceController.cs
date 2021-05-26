@@ -1,6 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -78,6 +82,28 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/send-fes")]
+        public async Task<string> SendFES([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] int count)
+        {
+            var stringBuilder = new StringBuilder();
+            var activityRequest = new ContainerFunctionExecutionActivityRequest(Enumerable.Empty<ContainerFunctionExecutionActivity>());
+            stringBuilder.AppendLine($"Initial count = {activityRequest.FunctionalActivitiesCount}");
+            activityRequest.FunctionalActivitiesCount = count;
+            stringBuilder.AppendLine($"New count = {activityRequest.FunctionalActivitiesCount}");
+
+            try
+            {
+                await meshServiceClient.PublishContainerActivity(activityRequest);
+            }
+            catch (Exception e)
+            {
+                stringBuilder.AppendLine(e.ToString());
+            }
+
+            return stringBuilder.ToString();
         }
     }
 }

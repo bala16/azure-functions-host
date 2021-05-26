@@ -18,6 +18,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Models
 
         public IEnumerable<ContainerFunctionExecutionActivity> Activities { get; }
 
-        public int FunctionalActivitiesCount { get; }
+        public int FunctionalActivitiesCount { get; set; }
     }
 }

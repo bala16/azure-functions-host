@@ -85,6 +85,24 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             }
         }
 
+        public async Task PublishContainerActivity(ContainerFunctionExecutionActivityRequest activityRequest)
+        {
+            _logger.LogDebug(
+                $"Publishing {activityRequest.Activities.Count()} container activities. Total functional events = {activityRequest.FunctionalActivitiesCount}");
+
+            try
+            {
+                await Utility.InvokeWithRetriesAsync(async () =>
+                {
+                    await PublishActivities(activityRequest);
+                }, 2, TimeSpan.FromSeconds(0.5));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"{nameof(PublishContainerActivity)}");
+            }
+        }
+
         public async Task NotifyHealthEvent(ContainerHealthEventType healthEventType, Type source, string details)
         {
             var healthEvent = new ContainerHealthEvent()
