@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -78,6 +80,46 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         {
             // Reaching here implies that http health of the container is ok.
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("admin/instance/send-event")]
+        public async Task<string> SendEvent([FromServices] IMeshServiceClient meshServiceClient, [FromQuery] int i)
+        {
+            var stringBuilder = new StringBuilder();
+
+            ContainerHealthEventType healthEventType = ContainerHealthEventType.Informational;
+            switch (i)
+            {
+                case 1:
+                    healthEventType = ContainerHealthEventType.Informational;
+                    break;
+
+                case 2:
+                    healthEventType = ContainerHealthEventType.Warning;
+                    break;
+
+                case 3:
+                    healthEventType = ContainerHealthEventType.Fatal;
+                    break;
+
+                default:
+                    healthEventType = ContainerHealthEventType.Informational;
+                    break;
+            }
+
+            stringBuilder.Append($"Type = {healthEventType}");
+
+            try
+            {
+                await meshServiceClient.NotifyHealthEvent(healthEventType, typeof(InstanceController), nameof(SendEvent));
+            }
+            catch (Exception e)
+            {
+                stringBuilder.Append(e.ToString());
+            }
+
+            return stringBuilder.ToString();
         }
     }
 }

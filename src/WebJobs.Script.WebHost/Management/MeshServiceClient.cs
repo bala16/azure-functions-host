@@ -157,6 +157,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 serialized = stringWriter.ToString();
             }
 
+            _logger.LogDebug($"Original = {JsonConvert.SerializeObject(o)} Updated = {serialized}");
+
             return serialized;
         }
     }
