@@ -23,6 +23,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         private static bool IsEncryptionSupported()
         {
+            if (SystemEnvironment.Instance.IsLinuxConsumptionOnAntares())
+            {
+                return false;
+            }
+
             return SystemEnvironment.Instance.IsAppService() ||
                 SystemEnvironment.Instance.IsLinuxConsumption() ||
                 SystemEnvironment.Instance.GetEnvironmentVariable(AzureWebsiteLocalEncryptionKey) != null;

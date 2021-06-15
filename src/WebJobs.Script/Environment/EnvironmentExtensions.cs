@@ -220,6 +220,18 @@ namespace Microsoft.Azure.WebJobs.Script
             return !environment.IsAppService() && !string.IsNullOrEmpty(environment.GetEnvironmentVariable(ContainerName));
         }
 
+        public static bool IsLinuxConsumptionOnAntares(this IEnvironment environment)
+        {
+            if (string.Equals("1", environment.GetEnvironmentVariable(AzureFunctionsOnLinuxVm)))
+            {
+                return true;
+            }
+
+            return environment.IsAppService() &&
+                   string.Equals(ScriptConstants.DynamicSku, AzureWebsiteSku, StringComparison.OrdinalIgnoreCase) &&
+                   RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+        }
+
         /// <summary>
         /// Gets a value indicating whether the application is running in a Linux App Service
         /// environment (Dedicated Linux).

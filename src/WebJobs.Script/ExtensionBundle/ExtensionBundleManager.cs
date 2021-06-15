@@ -97,6 +97,7 @@ namespace Microsoft.Azure.WebJobs.Script.ExtensionBundle
             if ((_environment.IsAppService()
                 || _environment.IsCoreTools()
                 || _environment.IsLinuxConsumption()
+                || _environment.IsLinuxConsumptionOnAntares()
                 || _environment.IsContainer())
                 && (!bundleFound || _options.EnsureLatest))
             {

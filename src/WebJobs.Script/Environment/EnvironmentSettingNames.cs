@@ -7,6 +7,7 @@ namespace Microsoft.Azure.WebJobs.Script
 {
     public static class EnvironmentSettingNames
     {
+        public const string AzureFunctionsOnLinuxVm = "WEBSITE_FUNCTIONS_ON_LINUX_VM";
         public const string AzureWebsiteName = "WEBSITE_SITE_NAME";
         public const string AzureWebsiteHostName = "WEBSITE_HOSTNAME";
         public const string AzureWebsiteSlotName = "WEBSITE_SLOT_NAME";

@@ -184,7 +184,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
             // Windows (Dedicated/Consumption)
             // Linux Consumption
-            if ((environment.IsWindowsAzureManagedHosting() || environment.IsLinuxConsumption()) &&
+            if ((environment.IsWindowsAzureManagedHosting() || environment.IsLinuxConsumption() || environment.IsLinuxConsumptionOnAntares()) &&
                 !environment.IsContainerReady())
             {
                 // container ready flag not set yet – site not fully specialized/initialized

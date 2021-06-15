@@ -96,7 +96,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             services.AddSingleton<IEventGenerator>(p =>
             {
                 var environment = p.GetService<IEnvironment>();
-                if (environment.IsLinuxConsumption())
+                if (environment.IsLinuxConsumption() || environment.IsLinuxConsumptionOnAntares())
                 {
                     return new LinuxContainerEventGenerator(environment);
                 }

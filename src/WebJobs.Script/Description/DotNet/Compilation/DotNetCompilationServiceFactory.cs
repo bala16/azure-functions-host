@@ -33,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                     string releaseModeSetting = SystemEnvironment.Instance.GetEnvironmentVariable(EnvironmentSettingNames.CompilationReleaseMode);
                     if (!bool.TryParse(releaseModeSetting, out bool releaseMode) &&
                         (SystemEnvironment.Instance.IsAppService() ||
+                         SystemEnvironment.Instance.IsLinuxConsumptionOnAntares() ||
                         SystemEnvironment.Instance.IsLinuxConsumption()) &&
                         !SystemEnvironment.Instance.IsRemoteDebuggingEnabled())
                     {

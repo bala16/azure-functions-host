@@ -80,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
         public static bool IsWarmUpRequest(HttpRequest request, bool inStandbyMode, IEnvironment environment)
         {
             return inStandbyMode &&
-                ((environment.IsAppService() && request.IsAppServiceInternalRequest(environment)) || environment.IsLinuxConsumption()) &&
+                ((environment.IsAppService() && request.IsAppServiceInternalRequest(environment)) || environment.IsLinuxConsumption() || environment.IsLinuxConsumptionOnAntares()) &&
                 (request.Path.StartsWithSegments(new PathString($"/api/{WarmUpConstants.FunctionName}")) ||
                 request.Path.StartsWithSegments(new PathString($"/api/{WarmUpConstants.AlternateRoute}")));
         }

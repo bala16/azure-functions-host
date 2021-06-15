@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics.SymbolStore;
 using System.Linq;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
@@ -65,7 +66,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     config.Add(new WebScriptHostConfigurationSource
                     {
                         IsAppServiceEnvironment = SystemEnvironment.Instance.IsAppService(),
-                        IsLinuxContainerEnvironment = SystemEnvironment.Instance.IsLinuxConsumption(),
+                        IsLinuxContainerEnvironment = SystemEnvironment.Instance.IsLinuxConsumption() || SystemEnvironment.Instance.IsLinuxConsumptionOnAntares(),
                         IsLinuxAppServiceEnvironment = SystemEnvironment.Instance.IsLinuxAppService()
                     });
                 })
@@ -92,6 +93,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             else if (SystemEnvironment.Instance.IsLinuxAppService())
             {
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledExceptionInLinuxAppService;
+            }
+            else if (SystemEnvironment.Instance.IsLinuxConsumptionOnAntares())
+            {
+                SystemEnvironment.Instance.SetEnvironmentVariable(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "1");
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledExceptionInLinuxConsumption;
             }
 
             // Some environments only set the auth key. Ensure that is used as the encryption key if that is not set
