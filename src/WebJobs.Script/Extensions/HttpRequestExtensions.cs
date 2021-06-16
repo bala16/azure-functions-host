@@ -79,6 +79,12 @@ namespace Microsoft.Azure.WebJobs.Script.Extensions
         public static bool IsAppServiceInternalRequest(this HttpRequest request, IEnvironment environment = null)
         {
             environment = environment ?? SystemEnvironment.Instance;
+
+            if (environment.IsLinuxConsumptionOnAntares())
+            {
+                return false;
+            }
+
             if (!environment.IsAppService())
             {
                 return false;
