@@ -96,11 +96,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             services.AddSingleton<IEventGenerator>(p =>
             {
                 var environment = p.GetService<IEnvironment>();
-                if (environment.IsLinuxConsumption() || environment.IsLinuxConsumptionOnAntares())
+                if (environment.IsLinuxConsumption())
                 {
                     return new LinuxContainerEventGenerator(environment);
                 }
-                else if (SystemEnvironment.Instance.IsLinuxAppService())
+                else if (SystemEnvironment.Instance.IsLinuxAppService() || environment.IsLinuxConsumptionOnAntares())
                 {
                     var hostNameProvider = p.GetService<HostNameProvider>();
                     return new LinuxAppServiceEventGenerator(new LinuxAppServiceFileLoggerFactory(), hostNameProvider);

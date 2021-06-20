@@ -33,6 +33,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         }
 
         [HttpPost]
+        [Route("admin/instance/assign2")]
+        public IActionResult Assign2([FromBody] HostAssignmentContext assignmentContext)
+        {
+            var succeeded = _instanceManager.StartAssignment(assignmentContext);
+
+            return succeeded
+                ? Accepted()
+                : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
+        }
+
+        [HttpPost]
         [Route("admin/instance/assign")]
         [Authorize(Policy = PolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> Assign([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
