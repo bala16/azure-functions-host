@@ -89,15 +89,18 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             if (SystemEnvironment.Instance.IsLinuxConsumption())
             {
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledExceptionInLinuxConsumption;
+                LinuxAppServiceEventGenerator.LogUnhandledException(new Exception($"{nameof(InitializeProcess)} IsLinuxConsumption"));
             }
             else if (SystemEnvironment.Instance.IsLinuxAppService())
             {
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledExceptionInLinuxAppService;
+                LinuxAppServiceEventGenerator.LogUnhandledException(new Exception($"{nameof(InitializeProcess)} IsLinuxAppService"));
             }
             else if (SystemEnvironment.Instance.IsLinuxConsumptionOnAntares())
             {
                 SystemEnvironment.Instance.SetEnvironmentVariable(EnvironmentSettingNames.AzureWebsitePlaceholderMode, "1");
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledExceptionInLinuxConsumption;
+                LinuxAppServiceEventGenerator.LogUnhandledException(new Exception($"{nameof(InitializeProcess)} IsLinuxConsumptionOnAntares"));
             }
 
             // Some environments only set the auth key. Ensure that is used as the encryption key if that is not set

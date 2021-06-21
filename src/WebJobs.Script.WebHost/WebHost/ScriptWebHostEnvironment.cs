@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost
 {
@@ -48,15 +49,23 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         {
             get
             {
+                LinuxAppServiceEventGenerator.LogUnhandledException(new Exception($"{nameof(InStandbyMode)} _standbyMode != null = {_standbyMode != null}"));
+
                 // once set, never reset
                 if (_standbyMode != null)
                 {
+                    LinuxAppServiceEventGenerator.LogUnhandledException(new Exception($"{nameof(InStandbyMode)} _standbyMode.Value = {_standbyMode.Value}"));
                     return _standbyMode.Value;
                 }
                 if (_environment.IsPlaceholderModeEnabled())
                 {
+                    LinuxAppServiceEventGenerator.LogUnhandledException(new Exception(
+                        $"{nameof(InStandbyMode)} _environment.IsPlaceholderModeEnabled = _environment.IsPlaceholderModeEnabled true"));
                     return true;
                 }
+
+                LinuxAppServiceEventGenerator.LogUnhandledException(new Exception(
+                    $"{nameof(InStandbyMode)} _environment.IsPlaceholderModeEnabled = _environment.IsPlaceholderModeEnabled false"));
 
                 // no longer standby mode
                 _standbyMode = false;
