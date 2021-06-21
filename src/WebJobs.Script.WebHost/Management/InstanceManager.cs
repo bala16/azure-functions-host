@@ -100,14 +100,21 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
 
         public bool StartAssignment(HostAssignmentContext context)
         {
+            _logger.LogInformation($"Begin {nameof(StartAssignment)} ------>");
             if (!_webHostEnvironment.InStandbyMode)
             {
+                _logger.LogInformation($"{nameof(StartAssignment)} NOT IN InStandbyMode {context.Environment == null} ------>");
+
                 // This is only true when specializing pinned containers.
                 if (!context.Environment.TryGetValue(EnvironmentSettingNames.ContainerStartContext, out string startContext))
                 {
                     _logger.LogError("Assign called while host is not in placeholder mode and start context is not present.");
                     return false;
                 }
+            }
+            else
+            {
+                _logger.LogInformation($"{nameof(StartAssignment)} InStandbyMode ------>");
             }
 
             if (_environment.IsContainerReady())
