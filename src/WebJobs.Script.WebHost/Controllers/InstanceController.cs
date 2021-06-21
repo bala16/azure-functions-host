@@ -49,7 +49,10 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
         public async Task<IActionResult> Assign([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
         {
             _logger.LogDebug($"Starting container assignment for host : {Request?.Host}. ContextLength is: {encryptedAssignmentContext.EncryptedContext?.Length}");
+            await Task.Delay(0);
+            return Ok();
 
+            /*
             var assignmentContext = _startupContextProvider.SetContext(encryptedAssignmentContext);
 
             // before starting the assignment we want to perform as much
@@ -73,6 +76,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             return succeeded
                 ? Accepted()
                 : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
+            */
         }
 
         [HttpGet]

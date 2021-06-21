@@ -103,8 +103,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
             _logger.LogInformation($"Begin {nameof(StartAssignment)} ------>");
             if (!_webHostEnvironment.InStandbyMode)
             {
-                _logger.LogInformation($"{nameof(StartAssignment)} NOT IN InStandbyMode {context.Environment == null} ------>");
-
                 // This is only true when specializing pinned containers.
                 if (!context.Environment.TryGetValue(EnvironmentSettingNames.ContainerStartContext, out string startContext))
                 {
@@ -117,7 +115,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Management
                 _logger.LogInformation($"{nameof(StartAssignment)} InStandbyMode ------>");
             }
 
-            if (_environment.IsContainerReady())
+            if (_environment.IsContainerReady() && !_environment.IsLinuxConsumptionOnAntares())
             {
                 _logger.LogError("Assign called while container is marked as specialized.");
                 return false;
