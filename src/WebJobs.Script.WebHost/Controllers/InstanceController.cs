@@ -90,5 +90,15 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
             Process.GetCurrentProcess().Kill(entireProcessTree);
             return DateTime.UtcNow.ToString(CultureInfo.CurrentCulture);
         }
+
+        [HttpGet]
+        [Route("admin/instance/getpid")]
+        public string GetPID()
+        {
+            var currentProcess = Process.GetCurrentProcess();
+            var processName = currentProcess.ProcessName;
+            int currentProcessId = currentProcess.Id;
+            return $"{processName} = {currentProcessId}";
+        }
     }
 }
